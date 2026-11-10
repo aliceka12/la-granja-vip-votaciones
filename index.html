@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Granja VIP 2ª Temporada – Monitor de Votaciones en Tiempo Real</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Top Navigation & Live Controls -->
+        <header class="top-navbar">
+            <div class="brand-group">
+                <img class="brand-logo" src="https://vota.tvazteca.com/uploads/logo-lagranja-vip_1788930541985.png" alt="La Granja VIP Logo" onerror="this.style.display='none'">
+                <div class="brand-titles">
+                    <h1>La Granja VIP 2 · Monitor en Tiempo Real</h1>
+                    <div class="brand-subtitle">
+                        <span>TV Azteca UNO · Seguimiento en vivo del servidor oficial de votaciones</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-group">
+                <div id="status-badge" class="live-badge">
+                    <span class="pulse-dot"></span>
+                    <span id="status-text">CONECTANDO EN VIVO...</span>
+                </div>
+
+                <select id="refresh-interval" class="select-interval" aria-label="Intervalo de actualización">
+                    <option value="3000">Actualizar cada 3 seg</option>
+                    <option value="5000" selected>Actualizar cada 5 seg</option>
+                    <option value="10000">Actualizar cada 10 seg</option>
+                    <option value="30000">Actualizar cada 30 seg</option>
+                    <option value="0">Pausar auto-actualización</option>
+                </select>
+
+                <button id="btn-refresh-now" class="btn" type="button">
+                    🔄 Actualizar ahora
+                </button>
+
+                <a href="https://www.tvazteca.com/aztecauno/la-granja-votaciones/vota/" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                    🗳️ Ir a Votar en TV Azteca
+                </a>
+            </div>
+        </header>
+
+        <!-- Global KPIs -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Total Votos Acumulados (Hoy)</div>
+                <div id="kpi-global-votes" class="kpi-value">--</div>
+                <div id="kpi-global-delta" class="kpi-sub">Sincronizando con vota.tvazteca.com...</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-label">Líder · Acompañante del Capataz</div>
+                <div id="kpi-leader1-name" class="kpi-value">--</div>
+                <div id="kpi-leader1-sub" class="kpi-sub">--</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-label">1° En Riesgo · Duelo de Nominación</div>
+                <div id="kpi-leader2-name" class="kpi-value">--</div>
+                <div id="kpi-leader2-sub" class="kpi-sub">--</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-label">Última Sincronización</div>
+                <div id="kpi-last-sync" class="kpi-value">--:--:--</div>
+                <div id="kpi-sync-mode" class="kpi-sub">Consultando API...</div>
+            </div>
+        </section>
+
+        <!-- Poll Filter Tabs -->
+        <div id="poll-tabs-container" class="poll-tabs"></div>
+
+        <!-- Polls Dynamic Grid -->
+        <main id="polls-wrapper" class="polls-Wrapper dual-view">
+            <div class="poll-section" style="text-align: center; padding: 60px 20px;">
+                <h2>Cargando conteo oficial en tiempo real...</h2>
+                <p class="poll-subtitle" style="margin-top: 8px;">Conectando con los endpoints de vota.tvazteca.com</p>
+            </div>
+        </main>
+
+        <!-- Live Activity & Context Section -->
+        <section class="info-grid">
+            <div class="info-panel">
+                <h3>⚡ Flujo de Votos en Tiempo Real (Bitácora en Vivo)</h3>
+                <ul id="live-log-list" class="log-list">
+                    <li class="log-item">
+                        <span>Monitoreando cambios en los conteos de votos...</span>
+                        <span>Activo</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="info-panel">
+                <h3>📌 Contexto de la Semana 10 (Noviembre 2026)</h3>
+                <ul class="log-list">
+                    <li class="log-item">
+                        <span><strong>Último Eliminado (Gala Dom 8 Nov):</strong> Fernando Lozada</span>
+                        <span>Semana 9</span>
+                    </li>
+                    <li class="log-item">
+                        <span><strong>Salida Voluntaria:</strong> Natalia Alcocer ("La Vikinga")</span>
+                        <span>Semana 9</span>
+                    </li>
+                    <li class="log-item">
+                        <span><strong>1ª Nominada Directa (Legado de Fernando):</strong> Ivonne Montero</span>
+                        <span>Semana 10</span>
+                    </li>
+                    <li class="log-item">
+                        <span><strong>Fuente de Datos:</strong> API Oficial <code>vota.tvazteca.com/api/results</code></span>
+                        <span>Tiempo Real</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <footer class="footer-note">
+            Sistema de Monitoreo en Tiempo Real · La Granja VIP Segunda Temporada · Datos obtenidos de la API pública de votaciones de TV Azteca.
+        </footer>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
