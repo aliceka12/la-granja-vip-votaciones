@@ -104,7 +104,41 @@ async function fetchFromBrowserWithFallback() {
         }
     } catch (_) {}
 
-    // Intentamos consultar la API de resultados mediante proxy CORS ligero si estamos en GitHub Pages
+    // Intentamos consultar primero la configuración en vivo (por si TV Azteca cambió a "Salvar al Nominado" o agregó participantes)
+    const liveConfig = await tryCorsFetchJson(`${BASE_TVAZTECA}/config/vota.json?_t=${Date.now()}`);
+    const liveStatus = await tryCorsFetchJson(`${BASE_TVAZTECA}/config/vota-status.json?_t=${Date.now()}`);
+
+    if (liveConfig && liveConfig.voting) {
+        const dynamicPolls = [];
+        const v1 = liveConfig.voting;
+        if (v1.configId) {
+            const r1 = await tryCorsFetchJson(`${BASE_TVAZTECA}/api/results?config_id=${encodeURIComponent(v1.configId)}&_t=${Date.now()}`) || {};
+            dynamicPolls.push(buildPollFromBrowserConfig(v1, r1, 'principal'));
+        }
+        const v2 = liveConfig.voting2;
+        if (v2 && v2.enabled && v2.configId) {
+            const r2 = await tryCorsFetchJson(`${BASE_TVAZTECA}/api/results?config_id=${encodeURIComponent(v2.configId)}&_t=${Date.now()}`) || {};
+            dynamicPolls.push(buildPollFromBrowserConfig(v2, r2, 'secundaria'));
+        }
+
+        if (dynamicPolls.length > 0) {
+            state.connectionMode = 'Sincronizado en Vivo';
+            return {
+                ok: true,
+                localTime: new Date().toLocaleString('es-MX'),
+                programTitle: liveConfig.nombre || 'La Granja VIP Segunda Temporada',
+                status: {
+                    active: liveStatus ? liveStatus.active !== false : true,
+                    votingOpen: liveStatus ? liveStatus.voting_open !== false : true,
+                    votingClosedText: liveStatus?.voting_closed_text || '',
+                    configVersion: liveStatus?.config_version || 'live'
+                },
+                polls: dynamicPolls
+            };
+        }
+    }
+
+    // Si el proxy de vota.json no respondió, actualizamos los conteos sobre la estructura de snapshot.json
     if (snapshot && Array.isArray(snapshot.polls)) {
         try {
             const updatedPolls = await Promise.all(snapshot.polls.map(async (poll) => {
@@ -146,6 +180,46 @@ async function fetchFromBrowserWithFallback() {
         return snapshot;
     }
     return null;
+}
+
+function buildPollFromBrowserConfig(votingConfig, rawResults, key) {
+    const contestants = (votingConfig.contestants || []).filter(c => !c.deleted);
+    let totalActiveVotes = 0;
+
+    const formatted = contestants.map(c => {
+        const votes = typeof rawResults[c.id] === 'number' ? rawResults[c.id] : 0;
+        totalActiveVotes += votes;
+        let img = c.image || '';
+        if (img && !img.startsWith('http')) {
+            img = BASE_TVAZTECA + (img.startsWith('/') ? '' : '/') + img;
+        }
+        return {
+            id: c.id,
+            name: c.name || 'Participante',
+            image: img,
+            votes
+        };
+    }).sort((a, b) => b.votes - a.votes);
+
+    formatted.forEach((c, idx) => {
+        c.rank = idx + 1;
+        c.percentage = totalActiveVotes > 0 ? Number(((c.votes / totalActiveVotes) * 100).toFixed(2)) : 0;
+    });
+
+    const maxVotes = votingConfig.maxVotes || 10;
+    return {
+        key,
+        configId: votingConfig.configId,
+        internalName: votingConfig.name || '',
+        title: votingConfig.title || 'Votación Activa',
+        subtitle: String(votingConfig.subtitle || '').replace('{n}', String(maxVotes)),
+        maxVotes,
+        accentColor: votingConfig.accentColor || '#da07c8',
+        extraColor: votingConfig.extraColor || '#d5d546',
+        totalActiveVotes,
+        contestants: formatted,
+        rawResults
+    };
 }
 
 async function tryCorsFetchJson(url) {
@@ -244,18 +318,31 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta) {
         }
     }
 
-    // Líder Votación 1
+    // Líder Votación 1 (Dinámico según la etapa: Salvación, Capataz, Final, etc.)
     if (data.polls[0] && data.polls[0].contestants[0]) {
-        const leader1 = data.polls[0].contestants[0];
+        const p1 = data.polls[0];
+        const leader1 = p1.contestants[0];
+        const lbl1 = document.getElementById('kpi-leader1-label');
+        if (lbl1) lbl1.textContent = `1° Lugar · ${p1.title.slice(0, 28)}`;
         document.getElementById('kpi-leader1-name').textContent = leader1.name;
         document.getElementById('kpi-leader1-sub').textContent = `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos)`;
     }
 
-    // Líder Votación 2
+    // Líder Votación 2 (O información de la Votación 1 si solo hay 1 votación activa como en Gala de Eliminación/Salvación)
+    const card2 = document.getElementById('kpi-card-poll2');
+    const lbl2 = document.getElementById('kpi-leader2-label');
     if (data.polls[1] && data.polls[1].contestants[0]) {
-        const leader2 = data.polls[1].contestants[0];
+        const p2 = data.polls[1];
+        const leader2 = p2.contestants[0];
+        if (lbl2) lbl2.textContent = `1° Lugar · ${p2.title.slice(0, 28)}`;
         document.getElementById('kpi-leader2-name').textContent = leader2.name;
         document.getElementById('kpi-leader2-sub').textContent = `${fmtPct(leader2.percentage)} (${fmtNum(leader2.votes)} votos)`;
+    } else if (data.polls[0] && data.polls[0].contestants.length > 1) {
+        const p1 = data.polls[0];
+        const lastContestant = p1.contestants[p1.contestants.length - 1];
+        if (lbl2) lbl2.textContent = `En Riesgo (Menor Voto) · ${p1.title.slice(0, 20)}`;
+        document.getElementById('kpi-leader2-name').textContent = lastContestant.name;
+        document.getElementById('kpi-leader2-sub').textContent = `${fmtPct(lastContestant.percentage)} (${fmtNum(lastContestant.votes)} votos)`;
     }
 
     // Última sincronización
@@ -272,22 +359,27 @@ function renderTabs(polls) {
     const container = document.getElementById('poll-tabs-container');
     if (!container) return;
 
-    const buttonsHtml = [
-        `<button class="poll-tab-btn ${state.viewMode === 'dual' ? 'active' : ''}" onclick="setViewMode('dual')">
-            <div class="tab-title-wrap">
-                <span class="tab-badge">VISTA COMPLETA</span>
-                <span class="tab-main-title">Ambas Votaciones Simultáneas (${polls.length})</span>
-            </div>
-            <span class="tab-votes-count">2 Paneles</span>
-        </button>`
-    ];
+    const buttonsHtml = [];
+    if (polls.length > 1) {
+        buttonsHtml.push(`
+            <button class="poll-tab-btn ${state.viewMode === 'dual' ? 'active' : ''}" onclick="setViewMode('dual')">
+                <div class="tab-title-wrap">
+                    <span class="tab-badge">VISTA COMPLETA</span>
+                    <span class="tab-main-title">Todas las Votaciones Activas (${polls.length})</span>
+                </div>
+                <span class="tab-votes-count">${polls.length} Paneles</span>
+            </button>
+        `);
+    }
 
     polls.forEach((poll, idx) => {
-        const label = idx === 0 ? 'VOTACIÓN 1 · CAPATAZ' : 'VOTACIÓN 2 · DUELO DE NOMINACIÓN';
+        const label = poll.internalName
+            ? poll.internalName.replace(/- LGVIP26.*/i, '').trim()
+            : `VOTACIÓN ACTIVA #${idx + 1}`;
         buttonsHtml.push(`
-            <button class="poll-tab-btn ${state.viewMode === poll.key ? 'active' : ''}" onclick="setViewMode('${poll.key}')">
+            <button class="poll-tab-btn ${state.viewMode === poll.key || (polls.length === 1 && idx === 0) ? 'active' : ''}" onclick="setViewMode('${poll.key}')">
                 <div class="tab-title-wrap">
-                    <span class="tab-badge">${label}</span>
+                    <span class="tab-badge">${escapeHtml(label)}</span>
                     <span class="tab-main-title">${escapeHtml(poll.title)}</span>
                 </div>
                 <span class="tab-votes-count">${fmtNum(poll.totalActiveVotes)}</span>
@@ -319,11 +411,12 @@ function renderPolls(polls, deltas) {
         : 'polls-Wrapper';
 
     wrapper.innerHTML = visiblePolls.map((poll, idx) => {
-        const badgeLabel = poll.key === 'principal'
-            ? 'DINÁMICA 1 · HABITACIÓN DEL CAPATAZ'
-            : 'DINÁMICA 2 · DUELO DE NOMINACIÓN';
+        const badgeLabel = poll.internalName
+            ? poll.internalName
+            : (idx === 0 ? 'VOTACIÓN PRINCIPAL EN CURSO' : 'VOTACIÓN SECUNDARIA EN CURSO');
+        const isEliminationOrSave = /salv|nominad|elimin|favorito/i.test(poll.title + ' ' + poll.internalName);
 
-        const cardsHtml = poll.contestants.map(c => {
+        const cardsHtml = poll.contestants.map((c, cIdx) => {
             const key = `${poll.configId}_${c.id}`;
             const delta = deltas[key] || 0;
             const deltaHtml = delta > 0
@@ -332,10 +425,12 @@ function renderPolls(polls, deltas) {
 
             let statusTag = 'En competencia';
             if (c.rank === 1) {
-                statusTag = poll.key === 'principal'
-                    ? '🔥 Favorito actual para acompañar al Capataz'
-                    : '⚠️ Más votado para ir al Duelo de Nominación';
-            } else if (c.rank === 2) {
+                statusTag = isEliminationOrSave
+                    ? '🔥 Líder en votos del público (Mayor apoyo)'
+                    : '🔥 1° Lugar actual en la votación';
+            } else if (c.rank === poll.contestants.length && poll.contestants.length > 2 && isEliminationOrSave) {
+                statusTag = '⚠️ En zona de peligro (Menor porcentaje de votos)';
+            } else if (c.rank > 1) {
                 const diffLeader = poll.contestants[0].votes - c.votes;
                 statusTag = `A ${fmtNum(diffLeader)} votos del 1° lugar`;
             }

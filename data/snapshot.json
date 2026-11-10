@@ -1,7 +1,7 @@
 {
     "ok": true,
-    "timestamp": "2026-11-10T16:10:18Z",
-    "localTime": "2026-11-10 16:10:18",
+    "timestamp": "2026-11-10T16:20:53Z",
+    "localTime": "2026-11-10 16:20:53",
     "sourceUrl": "https://www.tvazteca.com/aztecauno/la-granja-votaciones/vota/",
     "apiEndpoint": "https://vota.tvazteca.com",
     "programTitle": "¡Vota en La Granja VIP Segunda Temporada por tu granjero favorito!",
@@ -22,40 +22,40 @@
             "maxVotes": 10,
             "accentColor": "#da07c8",
             "extraColor": "#d5d546",
-            "totalActiveVotes": 1551490,
-            "totalRawVotes": 1561100,
+            "totalActiveVotes": 1562050,
+            "totalRawVotes": 1571660,
             "contestants": [
                 {
                     "id": "6d879b33-f2b3-4c85-8bd8-ded17e7af3b6",
                     "name": "Kevyn \"Bicolor\"",
                     "image": "https://vota.tvazteca.com/uploads/Kevyn_Contreras_1793674823986.jpg",
-                    "votes": 920155,
+                    "votes": 922849,
                     "rank": 1,
-                    "percentage": 59.31
+                    "percentage": 59.08
                 },
                 {
                     "id": "f853cddb-9df6-4238-b3ca-2506caee8359",
                     "name": "Rafa Mercadante",
                     "image": "https://vota.tvazteca.com/uploads/Rafael_1794275814336.jpg",
-                    "votes": 613805,
+                    "votes": 621567,
                     "rank": 2,
-                    "percentage": 39.56
+                    "percentage": 39.79
                 },
                 {
                     "id": "f493bca4-977a-4a1e-95b2-0083977adea1",
                     "name": "Julio Camejo",
                     "image": "https://vota.tvazteca.com/uploads/Julio_1794275837630.jpg",
-                    "votes": 17530,
+                    "votes": 17634,
                     "rank": 3,
                     "percentage": 1.13
                 }
             ],
             "rawResults": {
                 "3589c55a-c536-4ce8-9c8d-d8a4fca7855f": 10,
-                "6d879b33-f2b3-4c85-8bd8-ded17e7af3b6": 920155,
+                "6d879b33-f2b3-4c85-8bd8-ded17e7af3b6": 922849,
                 "db4d155c-5530-4ad8-ada8-fddaedbcaceb": 9600,
-                "f493bca4-977a-4a1e-95b2-0083977adea1": 17530,
-                "f853cddb-9df6-4238-b3ca-2506caee8359": 613805
+                "f493bca4-977a-4a1e-95b2-0083977adea1": 17634,
+                "f853cddb-9df6-4238-b3ca-2506caee8359": 621567
             }
         },
         {
@@ -67,54 +67,54 @@
             "maxVotes": 10,
             "accentColor": "#da07c8",
             "extraColor": "#d5d546",
-            "totalActiveVotes": 1235528,
-            "totalRawVotes": 1235600,
+            "totalActiveVotes": 1247928,
+            "totalRawVotes": 1248000,
             "contestants": [
                 {
                     "id": "58d3f600-f12d-4817-9452-8c7c1b9f3863",
                     "name": "Kevyn \"Bicolor\"",
                     "image": "https://vota.tvazteca.com/uploads/Kevyn_Contreras_1793674823986.jpg",
-                    "votes": 1024598,
+                    "votes": 1033090,
                     "rank": 1,
-                    "percentage": 82.93
+                    "percentage": 82.78
                 },
                 {
                     "id": "6b45306a-d655-4e52-abfe-0af7aa5333f4",
                     "name": "Bebeshita",
                     "image": "https://vota.tvazteca.com/uploads/Bebeshita_1794276142630.jpg",
-                    "votes": 86731,
+                    "votes": 88107,
                     "rank": 2,
-                    "percentage": 7.02
+                    "percentage": 7.06
                 },
                 {
                     "id": "8d0699ae-5754-471a-88fc-420d5e8a8b9d",
                     "name": "Niurka",
                     "image": "https://vota.tvazteca.com/uploads/Niurka_1794276213646.jpg",
-                    "votes": 81912,
+                    "votes": 84095,
                     "rank": 3,
-                    "percentage": 6.63
+                    "percentage": 6.74
                 },
                 {
                     "id": "3589c55a-c536-4ce8-9c8d-d8a4fca7855f",
                     "name": "Kunno",
                     "image": "https://vota.tvazteca.com/uploads/Kunno_1794276159687.jpg",
-                    "votes": 24388,
+                    "votes": 24688,
                     "rank": 4,
-                    "percentage": 1.97
+                    "percentage": 1.98
                 },
                 {
                     "id": "7bd898a2-638e-45d5-a993-0d8943515edd",
                     "name": "Mono Osuna",
                     "image": "https://vota.tvazteca.com/uploads/Mono_1794276178122.jpg",
-                    "votes": 10900,
+                    "votes": 10914,
                     "rank": 5,
-                    "percentage": 0.88
+                    "percentage": 0.87
                 },
                 {
                     "id": "5845c984-95ed-4681-8025-d7a5e5c0382b",
                     "name": "Rafa Mercadante",
                     "image": "https://vota.tvazteca.com/uploads/Rafael_1794275814336.jpg",
-                    "votes": 4491,
+                    "votes": 4515,
                     "rank": 6,
                     "percentage": 0.36
                 },
@@ -122,20 +122,20 @@
                     "id": "c04be8f5-cf96-41d2-b879-e72268e18d11",
                     "name": "Julio Camejo",
                     "image": "https://vota.tvazteca.com/uploads/Julio_1794275837630.jpg",
-                    "votes": 2508,
+                    "votes": 2519,
                     "rank": 7,
                     "percentage": 0.2
                 }
             ],
             "rawResults": {
-                "3589c55a-c536-4ce8-9c8d-d8a4fca7855f": 24388,
-                "5845c984-95ed-4681-8025-d7a5e5c0382b": 4491,
-                "58d3f600-f12d-4817-9452-8c7c1b9f3863": 1024598,
-                "6b45306a-d655-4e52-abfe-0af7aa5333f4": 86731,
+                "3589c55a-c536-4ce8-9c8d-d8a4fca7855f": 24688,
+                "5845c984-95ed-4681-8025-d7a5e5c0382b": 4515,
+                "58d3f600-f12d-4817-9452-8c7c1b9f3863": 1033090,
+                "6b45306a-d655-4e52-abfe-0af7aa5333f4": 88107,
                 "6d879b33-f2b3-4c85-8bd8-ded17e7af3b6": 31,
-                "7bd898a2-638e-45d5-a993-0d8943515edd": 10900,
-                "8d0699ae-5754-471a-88fc-420d5e8a8b9d": 81912,
-                "c04be8f5-cf96-41d2-b879-e72268e18d11": 2508,
+                "7bd898a2-638e-45d5-a993-0d8943515edd": 10914,
+                "8d0699ae-5754-471a-88fc-420d5e8a8b9d": 84095,
+                "c04be8f5-cf96-41d2-b879-e72268e18d11": 2519,
                 "f493bca4-977a-4a1e-95b2-0083977adea1": 20,
                 "f853cddb-9df6-4238-b3ca-2506caee8359": 21
             }
