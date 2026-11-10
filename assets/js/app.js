@@ -61,23 +61,41 @@ function startAutoRefresh() {
  */
 async function fetchLiveVotes(isInitial = false) {
     updateSyncIndicator(true);
-    try {
-        // Estrategia 1: Backend PHP en tiempo real (Laragon / Servidor propio)
-        const phpResp = await fetch(`api/live.php?_t=${Date.now()}`, { cache: 'no-store' });
-        if (phpResp.ok) {
-            const contentType = phpResp.headers.get('content-type') || '';
-            if (contentType.includes('application/json')) {
-                const json = await phpResp.json();
-                if (json && json.ok && Array.isArray(json.polls)) {
-                    state.connectionMode = 'API Directa en Vivo (Tiempo Real)';
-                    processIncomingData(json, isInitial);
-                    updateSyncIndicator(false);
-                    return;
+
+    // Estrategia 1: Backend PHP en tiempo real
+    // 1A) Si corre dentro de Laragon directamente (http://localhost/...)
+    // 1B) Si se abre desde GitHub Pages en esta misma máquina con Laragon activo
+    const endpointsToTry = ['api/live.php'];
+    if (window.location.hostname.includes('github.io')) {
+        endpointsToTry.push('http://localhost/la_granja_vip_votaciones/api/live.php');
+    }
+
+    for (const ep of endpointsToTry) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
+            const phpResp = await fetch(`${ep}?_t=${Date.now()}`, { 
+                signal: controller.signal, 
+                cache: 'no-store' 
+            });
+            clearTimeout(timeoutId);
+            if (phpResp.ok) {
+                const contentType = phpResp.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const json = await phpResp.json();
+                    if (json && json.ok && Array.isArray(json.polls)) {
+                        state.connectionMode = ep.includes('localhost') 
+                            ? '🟢 Motor Local Activo (Tiempo Real)' 
+                            : '🟢 Conexión Directa en Vivo (Tiempo Real)';
+                        processIncomingData(json, isInitial);
+                        updateSyncIndicator(false);
+                        return;
+                    }
                 }
             }
+        } catch (_) {
+            // Continuar con el siguiente endpoint
         }
-    } catch (_) {
-        // Continúa a la estrategia 2 si no hay PHP activo (ej. GitHub Pages)
     }
 
     // Estrategia 2: Cliente directo / Proxy CORS + Snapshot en GitHub Pages
@@ -294,6 +312,22 @@ function addVoteLog(pollTitle, contestantName, diff, newTotal) {
 }
 
 function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta) {
+    // Control de banner informativo de conexión
+    const banner = document.getElementById('live-mode-banner');
+    const btnLocal = document.getElementById('btn-local-live');
+    const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    if (isLocalHost) {
+        if (banner) banner.style.display = 'none';
+        if (btnLocal) btnLocal.style.display = 'none';
+    } else {
+        if (state.connectionMode.includes('Snapshot')) {
+            if (banner) banner.style.display = 'flex';
+        } else {
+            if (banner) banner.style.display = 'none';
+        }
+    }
+
     const statusBadge = document.getElementById('status-badge');
     const statusText = document.getElementById('status-text');
     if (statusBadge && statusText) {

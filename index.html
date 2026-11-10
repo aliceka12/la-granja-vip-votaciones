@@ -25,6 +25,10 @@
             </div>
 
             <div class="controls-group">
+                <a href="http://localhost/la_granja_vip_votaciones/" id="btn-local-live" class="btn" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #34d399;" title="Abrir versión local en Laragon para ver subir los votos en vivo segundo a segundo">
+                    ⚡ Modo Local 100% en Vivo
+                </a>
+
                 <div id="status-badge" class="live-badge">
                     <span class="pulse-dot"></span>
                     <span id="status-text">CONECTANDO EN VIVO...</span>
@@ -47,6 +51,11 @@
                 </a>
             </div>
         </header>
+
+        <!-- Live Mode Notice Banner -->
+        <div id="live-mode-banner" class="live-mode-banner" style="display: none;">
+            <span>💡 <strong>Tip para Tiempo Real:</strong> En GitHub Pages los navegadores restringen llamadas externas continuas por políticas CORS. Para ver los votos subir segundo a segundo en vivo con incrementos (+votos), abre: <a href="http://localhost/la_granja_vip_votaciones/" target="_blank" style="color: #fde68a; text-decoration: underline; font-weight: 700;">http://localhost/la_granja_vip_votaciones/</a></span>
+        </div>
 
         <!-- Global KPIs -->
         <section class="kpi-grid">
