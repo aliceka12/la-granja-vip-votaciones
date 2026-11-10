@@ -62,10 +62,8 @@ function startAutoRefresh() {
 async function fetchLiveVotes(isInitial = false) {
     updateSyncIndicator(true);
 
-    // Estrategia 1: Backend PHP en tiempo real
-    // 1A) Si corre dentro de Laragon directamente (http://localhost/...)
-    // 1B) Si se abre desde GitHub Pages en esta misma máquina con Laragon activo
-    const endpointsToTry = ['api/live.php'];
+    // Estrategia 1: Backend en la nube (Vercel/Netlify) o local (PHP/Laragon)
+    const endpointsToTry = ['api/live', 'api/live.php'];
     if (window.location.hostname.includes('github.io')) {
         endpointsToTry.push('http://localhost/la_granja_vip_votaciones/api/live.php');
     }
@@ -73,20 +71,20 @@ async function fetchLiveVotes(isInitial = false) {
     for (const ep of endpointsToTry) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2500);
-            const phpResp = await fetch(`${ep}?_t=${Date.now()}`, { 
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const resp = await fetch(`${ep}?_t=${Date.now()}`, { 
                 signal: controller.signal, 
                 cache: 'no-store' 
             });
             clearTimeout(timeoutId);
-            if (phpResp.ok) {
-                const contentType = phpResp.headers.get('content-type') || '';
+            if (resp.ok) {
+                const contentType = resp.headers.get('content-type') || '';
                 if (contentType.includes('application/json')) {
-                    const json = await phpResp.json();
+                    const json = await resp.json();
                     if (json && json.ok && Array.isArray(json.polls)) {
                         state.connectionMode = ep.includes('localhost') 
                             ? '🟢 Motor Local Activo (Tiempo Real)' 
-                            : '🟢 Conexión Directa en Vivo (Tiempo Real)';
+                            : '🟢 Servidor Cloud en Vivo (Tiempo Real)';
                         processIncomingData(json, isInitial);
                         updateSyncIndicator(false);
                         return;
@@ -98,106 +96,27 @@ async function fetchLiveVotes(isInitial = false) {
         }
     }
 
-    // Estrategia 2: Cliente directo / Proxy CORS + Snapshot en GitHub Pages
-    try {
-        const directData = await fetchFromBrowserWithFallback();
-        if (directData) {
-            processIncomingData(directData, isInitial);
-            updateSyncIndicator(false);
-            return;
-        }
-    } catch (err) {
-        console.warn('Error en actualización:', err);
-    }
-    updateSyncIndicator(false);
-}
-
-async function fetchFromBrowserWithFallback() {
-    // Primero cargamos snapshot.json para tener la base rápida
-    let snapshot = null;
+    // Estrategia 2: Snapshot oficial actualizado por GitHub Actions en la nube
     try {
         const snapResp = await fetch(`data/snapshot.json?_t=${Date.now()}`, { cache: 'no-store' });
         if (snapResp.ok) {
-            snapshot = await snapResp.json();
+            const snapshot = await snapResp.json();
+            if (snapshot && snapshot.ok && Array.isArray(snapshot.polls)) {
+                let timeText = '';
+                if (snapshot.timestamp) {
+                    const dateObj = new Date(snapshot.timestamp);
+                    timeText = ` (Corte: ${dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`;
+                }
+                state.connectionMode = `☁️ GitHub Actions Auto-Sync${timeText}`;
+                processIncomingData(snapshot, isInitial);
+                updateSyncIndicator(false);
+                return;
+            }
         }
-    } catch (_) {}
-
-    // Intentamos consultar primero la configuración en vivo (por si TV Azteca cambió a "Salvar al Nominado" o agregó participantes)
-    const liveConfig = await tryCorsFetchJson(`${BASE_TVAZTECA}/config/vota.json?_t=${Date.now()}`);
-    const liveStatus = await tryCorsFetchJson(`${BASE_TVAZTECA}/config/vota-status.json?_t=${Date.now()}`);
-
-    if (liveConfig && liveConfig.voting) {
-        const dynamicPolls = [];
-        const v1 = liveConfig.voting;
-        if (v1.configId) {
-            const r1 = await tryCorsFetchJson(`${BASE_TVAZTECA}/api/results?config_id=${encodeURIComponent(v1.configId)}&_t=${Date.now()}`) || {};
-            dynamicPolls.push(buildPollFromBrowserConfig(v1, r1, 'principal'));
-        }
-        const v2 = liveConfig.voting2;
-        if (v2 && v2.enabled && v2.configId) {
-            const r2 = await tryCorsFetchJson(`${BASE_TVAZTECA}/api/results?config_id=${encodeURIComponent(v2.configId)}&_t=${Date.now()}`) || {};
-            dynamicPolls.push(buildPollFromBrowserConfig(v2, r2, 'secundaria'));
-        }
-
-        if (dynamicPolls.length > 0) {
-            state.connectionMode = 'Sincronizado en Vivo';
-            return {
-                ok: true,
-                localTime: new Date().toLocaleString('es-MX'),
-                programTitle: liveConfig.nombre || 'La Granja VIP Segunda Temporada',
-                status: {
-                    active: liveStatus ? liveStatus.active !== false : true,
-                    votingOpen: liveStatus ? liveStatus.voting_open !== false : true,
-                    votingClosedText: liveStatus?.voting_closed_text || '',
-                    configVersion: liveStatus?.config_version || 'live'
-                },
-                polls: dynamicPolls
-            };
-        }
+    } catch (err) {
+        console.warn('Error leyendo snapshot:', err);
     }
-
-    // Si el proxy de vota.json no respondió, actualizamos los conteos sobre la estructura de snapshot.json
-    if (snapshot && Array.isArray(snapshot.polls)) {
-        try {
-            const updatedPolls = await Promise.all(snapshot.polls.map(async (poll) => {
-                const targetUrl = `${BASE_TVAZTECA}/api/results?config_id=${encodeURIComponent(poll.configId)}&_t=${Date.now()}`;
-                const liveCounts = await tryCorsFetchJson(targetUrl);
-                if (!liveCounts) return poll;
-
-                let totalActive = 0;
-                const updatedContestants = poll.contestants.map(c => {
-                    const votes = typeof liveCounts[c.id] === 'number' ? liveCounts[c.id] : c.votes;
-                    totalActive += votes;
-                    return { ...c, votes };
-                }).sort((a, b) => b.votes - a.votes);
-
-                updatedContestants.forEach((c, idx) => {
-                    c.rank = idx + 1;
-                    c.percentage = totalActive > 0 ? Number(((c.votes / totalActive) * 100).toFixed(2)) : 0;
-                });
-
-                return {
-                    ...poll,
-                    totalActiveVotes: totalActive,
-                    contestants: updatedContestants,
-                    rawResults: liveCounts
-                };
-            }));
-
-            state.connectionMode = 'Sincronizado en Vivo';
-            return {
-                ...snapshot,
-                localTime: new Date().toLocaleString('es-MX'),
-                polls: updatedPolls
-            };
-        } catch (_) {}
-    }
-
-    if (snapshot) {
-        state.connectionMode = 'Snapshot Oficial Sincronizado';
-        return snapshot;
-    }
-    return null;
+    updateSyncIndicator(false);
 }
 
 function buildPollFromBrowserConfig(votingConfig, rawResults, key) {
