@@ -62,17 +62,20 @@ function startAutoRefresh() {
 async function fetchLiveVotes(isInitial = false) {
     updateSyncIndicator(true);
 
-    // Estrategia 1: Backend en la nube (Vercel/Netlify) o local (PHP/Laragon)
-    const endpointsToTry = ['api/live', 'api/live.php'];
+    // Estrategia 1: Backend en la nube (Vercel/Netlify) o llamada directa vía Vercel desde GitHub Pages
+    const endpointsToTry = ['api/live'];
     if (window.location.hostname.includes('github.io')) {
-        endpointsToTry.push('http://localhost/la_granja_vip_votaciones/api/live.php');
+        endpointsToTry.unshift('https://la-granja-vip-votaciones.vercel.app/api/live');
+    }
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        endpointsToTry.push('api/live.php');
     }
 
     for (const ep of endpointsToTry) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
-            const resp = await fetch(`${ep}?_t=${Date.now()}`, { 
+            const timeoutId = setTimeout(() => controller.abort(), 7500);
+            const resp = await fetch(`${ep}${ep.includes('?') ? '&' : '?'}_t=${Date.now()}`, { 
                 signal: controller.signal, 
                 cache: 'no-store' 
             });
@@ -82,9 +85,7 @@ async function fetchLiveVotes(isInitial = false) {
                 if (contentType.includes('application/json')) {
                     const json = await resp.json();
                     if (json && json.ok && Array.isArray(json.polls)) {
-                        state.connectionMode = ep.includes('localhost') 
-                            ? '🟢 Motor Local Activo (Tiempo Real)' 
-                            : '🟢 Servidor Cloud en Vivo (Tiempo Real)';
+                        state.connectionMode = '🟢 Servidor Cloud en Vivo (Tiempo Real)';
                         processIncomingData(json, isInitial);
                         updateSyncIndicator(false);
                         return;
@@ -96,25 +97,27 @@ async function fetchLiveVotes(isInitial = false) {
         }
     }
 
-    // Estrategia 2: Snapshot oficial actualizado por GitHub Actions en la nube
-    try {
-        const snapResp = await fetch(`data/snapshot.json?_t=${Date.now()}`, { cache: 'no-store' });
-        if (snapResp.ok) {
-            const snapshot = await snapResp.json();
-            if (snapshot && snapshot.ok && Array.isArray(snapshot.polls)) {
-                let timeText = '';
-                if (snapshot.timestamp) {
-                    const dateObj = new Date(snapshot.timestamp);
-                    timeText = ` (Corte: ${dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`;
+    // Estrategia 2: Snapshot de respaldo (solo si no hay datos cargados previamente)
+    if (!state.data) {
+        try {
+            const snapResp = await fetch(`data/snapshot.json?_t=${Date.now()}`, { cache: 'no-store' });
+            if (snapResp.ok) {
+                const snapshot = await snapResp.json();
+                if (snapshot && snapshot.ok && Array.isArray(snapshot.polls)) {
+                    let timeText = '';
+                    if (snapshot.timestamp) {
+                        const dateObj = new Date(snapshot.timestamp);
+                        timeText = ` (Corte: ${dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`;
+                    }
+                    state.connectionMode = `☁️ Snapshot de Respaldo${timeText}`;
+                    processIncomingData(snapshot, isInitial);
+                    updateSyncIndicator(false);
+                    return;
                 }
-                state.connectionMode = `☁️ GitHub Actions Auto-Sync${timeText}`;
-                processIncomingData(snapshot, isInitial);
-                updateSyncIndicator(false);
-                return;
             }
+        } catch (err) {
+            console.warn('Error leyendo snapshot:', err);
         }
-    } catch (err) {
-        console.warn('Error leyendo snapshot:', err);
     }
     updateSyncIndicator(false);
 }

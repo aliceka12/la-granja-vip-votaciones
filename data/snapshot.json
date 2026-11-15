@@ -1,7 +1,7 @@
 {
     "ok": true,
-    "timestamp": "2026-11-10T17:31:26Z",
-    "localTime": "2026-11-10 17:31:26",
+    "timestamp": "2026-11-15T21:20:12.904717Z",
+    "localTime": "2026-11-15 16:20:12",
     "sourceUrl": "https://www.tvazteca.com/aztecauno/la-granja-votaciones/vota/",
     "apiEndpoint": "https://vota.tvazteca.com",
     "programTitle": "¡Vota en La Granja VIP Segunda Temporada por tu granjero favorito!",
@@ -10,134 +10,71 @@
         "active": true,
         "votingOpen": true,
         "votingClosedText": "¡Votación cerrada! No te pierdas el programa de Lunes a Viernes a las 8:30 p.m. y Domingos a las 8:00 p.m por Azteca UNO.",
-        "configVersion": "bf7a4eb67e7a297d"
+        "configVersion": "853d6d18c10968db"
     },
     "polls": [
         {
             "key": "principal",
-            "configId": "dbf191ec-5b50-451a-85a1-e772c9697bec",
-            "internalName": "09/11/26 - ACOMPAÑANTE CAPATAZ - LGVIP26 (copia)",
-            "title": "¿Quién quieres que sea el acompañante del Capataz?",
+            "configId": "ef7f2caf-14b2-49c5-a891-f0cab21a74f0",
+            "internalName": "11/11/2026 LGVIP26 SALVA A TU GRANJERO FAVORITO",
+            "title": "¡Vota para salvar a tu Granjero Favorito!",
             "subtitle": "Reparte tus 10 votos entre tus favoritos.",
             "maxVotes": 10,
             "accentColor": "#da07c8",
             "extraColor": "#d5d546",
-            "totalActiveVotes": 1676300,
-            "totalRawVotes": 1685910,
+            "totalActiveVotes": 193064871,
+            "totalRawVotes": 197007685,
             "contestants": [
                 {
-                    "id": "6d879b33-f2b3-4c85-8bd8-ded17e7af3b6",
-                    "name": "Kevyn \"Bicolor\"",
-                    "image": "https://vota.tvazteca.com/uploads/Kevyn_Contreras_1793674823986.jpg",
-                    "votes": 941592,
-                    "rank": 1,
-                    "percentage": 56.17
-                },
-                {
-                    "id": "f853cddb-9df6-4238-b3ca-2506caee8359",
-                    "name": "Rafa Mercadante",
-                    "image": "https://vota.tvazteca.com/uploads/Rafael_1794275814336.jpg",
-                    "votes": 713985,
-                    "rank": 2,
-                    "percentage": 42.59
-                },
-                {
-                    "id": "f493bca4-977a-4a1e-95b2-0083977adea1",
-                    "name": "Julio Camejo",
-                    "image": "https://vota.tvazteca.com/uploads/Julio_1794275837630.jpg",
-                    "votes": 20723,
-                    "rank": 3,
-                    "percentage": 1.24
-                }
-            ],
-            "rawResults": {
-                "3589c55a-c536-4ce8-9c8d-d8a4fca7855f": 10,
-                "6d879b33-f2b3-4c85-8bd8-ded17e7af3b6": 941592,
-                "db4d155c-5530-4ad8-ada8-fddaedbcaceb": 9600,
-                "f493bca4-977a-4a1e-95b2-0083977adea1": 20723,
-                "f853cddb-9df6-4238-b3ca-2506caee8359": 713985
-            }
-        },
-        {
-            "key": "secundaria",
-            "configId": "2fc5854f-f561-4df7-9c39-f4d14d252769",
-            "internalName": "09/11/26 - DUELO NOMINACION - LGVIP26 ",
-            "title": "Elige a un Granjero para el Duelo de Nominación",
-            "subtitle": "Reparte tus 10 votos entre tus favoritos.",
-            "maxVotes": 10,
-            "accentColor": "#da07c8",
-            "extraColor": "#d5d546",
-            "totalActiveVotes": 1372088,
-            "totalRawVotes": 1372160,
-            "contestants": [
-                {
-                    "id": "58d3f600-f12d-4817-9452-8c7c1b9f3863",
-                    "name": "Kevyn \"Bicolor\"",
-                    "image": "https://vota.tvazteca.com/uploads/Kevyn_Contreras_1793674823986.jpg",
-                    "votes": 1130616,
-                    "rank": 1,
-                    "percentage": 82.4
-                },
-                {
-                    "id": "6b45306a-d655-4e52-abfe-0af7aa5333f4",
-                    "name": "Bebeshita",
-                    "image": "https://vota.tvazteca.com/uploads/Bebeshita_1794276142630.jpg",
-                    "votes": 97937,
-                    "rank": 2,
-                    "percentage": 7.14
-                },
-                {
-                    "id": "8d0699ae-5754-471a-88fc-420d5e8a8b9d",
+                    "id": "24789d08-876d-4633-b4d1-3ad1068edf4d",
                     "name": "Niurka",
-                    "image": "https://vota.tvazteca.com/uploads/Niurka_1794276213646.jpg",
-                    "votes": 96959,
-                    "rank": 3,
-                    "percentage": 7.07
+                    "image": "https://vota.tvazteca.com/uploads/Niurka_1791475972388.jpg",
+                    "votes": 85137060,
+                    "rank": 1,
+                    "percentage": 44.1
                 },
                 {
-                    "id": "3589c55a-c536-4ce8-9c8d-d8a4fca7855f",
-                    "name": "Kunno",
-                    "image": "https://vota.tvazteca.com/uploads/Kunno_1794276159687.jpg",
-                    "votes": 27404,
-                    "rank": 4,
-                    "percentage": 2
+                    "id": "f4949176-08ce-4082-ba21-9419f8bc19f9",
+                    "name": "Bebeshita",
+                    "image": "https://vota.tvazteca.com/uploads/Bebeshita_1793582000320.jpg",
+                    "votes": 74109016,
+                    "rank": 2,
+                    "percentage": 38.39
                 },
                 {
-                    "id": "7bd898a2-638e-45d5-a993-0d8943515edd",
-                    "name": "Mono Osuna",
-                    "image": "https://vota.tvazteca.com/uploads/Mono_1794276178122.jpg",
-                    "votes": 11312,
-                    "rank": 5,
-                    "percentage": 0.82
-                },
-                {
-                    "id": "5845c984-95ed-4681-8025-d7a5e5c0382b",
+                    "id": "3e151f8b-7872-4a84-9179-28d8e6467814",
                     "name": "Rafa Mercadante",
-                    "image": "https://vota.tvazteca.com/uploads/Rafael_1794275814336.jpg",
-                    "votes": 5115,
-                    "rank": 6,
-                    "percentage": 0.37
+                    "image": "https://vota.tvazteca.com/uploads/Rafael_1794457587626.jpg",
+                    "votes": 22217048,
+                    "rank": 3,
+                    "percentage": 11.51
                 },
                 {
-                    "id": "c04be8f5-cf96-41d2-b879-e72268e18d11",
-                    "name": "Julio Camejo",
-                    "image": "https://vota.tvazteca.com/uploads/Julio_1794275837630.jpg",
-                    "votes": 2745,
-                    "rank": 7,
-                    "percentage": 0.2
+                    "id": "d4c89408-a283-4167-a56d-cf8d53066002",
+                    "name": "Ivonne Montero",
+                    "image": "https://vota.tvazteca.com/uploads/Ivonne_Montero_1788994702875.jpg",
+                    "votes": 11601747,
+                    "rank": 4,
+                    "percentage": 6.01
                 }
             ],
             "rawResults": {
-                "3589c55a-c536-4ce8-9c8d-d8a4fca7855f": 27404,
-                "5845c984-95ed-4681-8025-d7a5e5c0382b": 5115,
-                "58d3f600-f12d-4817-9452-8c7c1b9f3863": 1130616,
-                "6b45306a-d655-4e52-abfe-0af7aa5333f4": 97937,
-                "6d879b33-f2b3-4c85-8bd8-ded17e7af3b6": 31,
-                "7bd898a2-638e-45d5-a993-0d8943515edd": 11312,
-                "8d0699ae-5754-471a-88fc-420d5e8a8b9d": 96959,
-                "c04be8f5-cf96-41d2-b879-e72268e18d11": 2745,
-                "f493bca4-977a-4a1e-95b2-0083977adea1": 20,
-                "f853cddb-9df6-4238-b3ca-2506caee8359": 21
+                "00000000-0000-0000-0000-000000000000": 20,
+                "0aa4019d-922b-4930-8372-ce05e078a74e": 155,
+                "24789d08-876d-4633-b4d1-3ad1068edf4d": 85137060,
+                "3e151f8b-7872-4a84-9179-28d8e6467814": 22217048,
+                "409ab39f-6b58-4bf3-8d11-11de4dcfcc50": 3,
+                "4d7f35ae-6c19-4e66-bf3b-4d81f9b1458f": 22,
+                "953f2032-c90a-4739-98ac-7f555c3080c6": 107399,
+                "d4c89408-a283-4167-a56d-cf8d53066002": 11601747,
+                "d7443d5a-945f-45a4-8560-a7aa8324c21b": 3835165,
+                "ebfd487f-5128-4515-a847-36a1a5c2643c": 10,
+                "f493bca4-977a-4a1e-95b2-0083977adea1": 1,
+                "f4949176-08ce-4082-ba21-9419f8bc19f9": 74109016,
+                "f853cddb-9df6-4238-b3ca-2506caee8359": 9,
+                "x'": 10,
+                "x' AND SLEEP(5)#": 10,
+                "x' AND SLEEP(5)-- -": 10
             }
         }
     ]
