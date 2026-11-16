@@ -418,6 +418,196 @@ body {
     gap: 14px;
 }
 
+/* Final Verdict Banner / Closed Poll Styling */
+.final-verdict-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(17, 23, 36, 0.96) 65%);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    box-shadow: 0 12px 35px -10px rgba(245, 158, 11, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    margin-bottom: 22px;
+    position: relative;
+    overflow: hidden;
+}
+
+.verdict-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.verdict-closed-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.verdict-closed-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+}
+
+.verdict-notice {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.verdict-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.verdict-col {
+    background: rgba(15, 23, 42, 0.7);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--border-glass);
+}
+
+.verdict-col.winner {
+    border-color: rgba(16, 185, 129, 0.55);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(15, 23, 42, 0.85) 100%);
+    box-shadow: 0 4px 20px -4px rgba(16, 185, 129, 0.25);
+}
+
+.verdict-col.loser {
+    border-color: rgba(239, 68, 68, 0.45);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(15, 23, 42, 0.85) 100%);
+}
+
+.verdict-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.verdict-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #10b981;
+}
+
+.verdict-col.loser .verdict-avatar {
+    border-color: #ef4444;
+    filter: grayscale(15%);
+}
+
+.verdict-crown {
+    position: absolute;
+    top: -12px;
+    right: -6px;
+    font-size: 1.3rem;
+}
+
+.verdict-skull {
+    position: absolute;
+    top: -10px;
+    right: -6px;
+    font-size: 1.15rem;
+}
+
+.verdict-details h4 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 2px;
+}
+
+.verdict-pill-win {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(16, 185, 129, 0.25);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    margin-bottom: 4px;
+}
+
+.verdict-pill-lose {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.25);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    margin-bottom: 4px;
+}
+
+.verdict-stats {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+}
+
+.verdict-stats strong {
+    color: #fff;
+    font-weight: 800;
+}
+
+/* Card Closed Variations */
+.contestant-card.is-closed.rank-1 {
+    border-color: rgba(16, 185, 129, 0.55);
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.14) 0%, rgba(15, 23, 42, 0.8) 60%);
+    box-shadow: 0 4px 20px -4px rgba(16, 185, 129, 0.2);
+}
+
+.contestant-card.is-closed.rank-last {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, rgba(15, 23, 42, 0.75) 60%);
+}
+
+.status-pill-saved {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: #34d399;
+}
+
+.status-pill-eliminated {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: #f87171;
+}
+
+.poll-tag.closed {
+    background: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
 .contestant-card {
     background: rgba(15, 23, 42, 0.65);
     border: 1px solid var(--border-glass);

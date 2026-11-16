@@ -1,13 +1,14 @@
 /**
- * Motor en Tiempo Real - Monitor de Votaciones La Granja VIP (Segunda Temporada)
- * Conecta con el proxy local PHP (api/live.php), proxies CORS públicos o el snapshot actualizado.
+ * Motor de Monitoreo - La Granja VIP (Segunda Temporada)
+ * Soporta actualización en tiempo real en Vercel, Laragon local y GitHub Pages,
+ * y genera una presentación de RESULTADOS FINALES DEFINITIVOS cuando la votación concluye.
  */
 
 const state = {
     data: null,
-    prevVotes: {}, // { configId_contestantId: votes }
-    prevTotals: {}, // { configId: totalVotes }
-    viewMode: 'dual', // 'dual', 'principal', 'secundaria'
+    prevVotes: {},
+    prevTotals: {},
+    viewMode: 'dual',
     refreshMs: 5000,
     timerId: null,
     charts: {},
@@ -53,29 +54,20 @@ function startAutoRefresh() {
     }
 }
 
-/**
- * Intenta obtener los datos en tiempo real usando:
- * 1) El endpoint PHP local (api/live.php) si corre en Laragon / servidor PHP
- * 2) Consulta directa / CORS Proxy hacia vota.tvazteca.com (para GitHub Pages)
- * 3) El archivo data/snapshot.json como respaldo garantizado
- */
 async function fetchLiveVotes(isInitial = false) {
     updateSyncIndicator(true);
 
-    // Estrategia 1: Backend en la nube (Vercel/Netlify) o llamada directa vía Vercel desde GitHub Pages
-    const endpointsToTry = ['api/live'];
+    // 1. Probar endpoints dinámicos (Vercel Serverless / Laragon PHP)
+    const endpointsToTry = ['api/live', 'api/live.php'];
     if (window.location.hostname.includes('github.io')) {
-        endpointsToTry.unshift('https://la-granja-vip-votaciones.vercel.app/api/live');
-    }
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        endpointsToTry.push('api/live.php');
+        endpointsToTry.push('http://localhost/la_granja_vip_votaciones/api/live.php');
     }
 
     for (const ep of endpointsToTry) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 7500);
-            const resp = await fetch(`${ep}${ep.includes('?') ? '&' : '?'}_t=${Date.now()}`, { 
+            const timeoutId = setTimeout(() => controller.abort(), 2200);
+            const resp = await fetch(`${ep}?_t=${Date.now()}`, { 
                 signal: controller.signal, 
                 cache: 'no-store' 
             });
@@ -85,111 +77,45 @@ async function fetchLiveVotes(isInitial = false) {
                 if (contentType.includes('application/json')) {
                     const json = await resp.json();
                     if (json && json.ok && Array.isArray(json.polls)) {
-                        state.connectionMode = '🟢 Servidor Cloud en Vivo (Tiempo Real)';
+                        state.connectionMode = ep.includes('localhost') 
+                            ? '🟢 Motor Local Activo (Laragon)' 
+                            : '🟢 Servidor Cloud en Vivo';
                         processIncomingData(json, isInitial);
                         updateSyncIndicator(false);
                         return;
                     }
                 }
             }
-        } catch (_) {
-            // Continuar con el siguiente endpoint
-        }
+        } catch (_) {}
     }
 
-    // Estrategia 2: Snapshot de respaldo (solo si no hay datos cargados previamente)
-    if (!state.data) {
-        try {
-            const snapResp = await fetch(`data/snapshot.json?_t=${Date.now()}`, { cache: 'no-store' });
-            if (snapResp.ok) {
-                const snapshot = await snapResp.json();
-                if (snapshot && snapshot.ok && Array.isArray(snapshot.polls)) {
-                    let timeText = '';
-                    if (snapshot.timestamp) {
-                        const dateObj = new Date(snapshot.timestamp);
-                        timeText = ` (Corte: ${dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`;
-                    }
-                    state.connectionMode = `☁️ Snapshot de Respaldo${timeText}`;
-                    processIncomingData(snapshot, isInitial);
-                    updateSyncIndicator(false);
-                    return;
+    // 2. Snapshot estático (GitHub Pages)
+    try {
+        const snapResp = await fetch(`data/snapshot.json?_t=${Date.now()}`, { cache: 'no-store' });
+        if (snapResp.ok) {
+            const snapshot = await snapResp.json();
+            if (snapshot && snapshot.ok && Array.isArray(snapshot.polls)) {
+                let timeText = '';
+                if (snapshot.timestamp) {
+                    const dateObj = new Date(snapshot.timestamp);
+                    timeText = ` (${dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`;
                 }
+                state.connectionMode = `☁️ Snapshot Oficial Sincronizado${timeText}`;
+                processIncomingData(snapshot, isInitial);
+                updateSyncIndicator(false);
+                return;
             }
-        } catch (err) {
-            console.warn('Error leyendo snapshot:', err);
         }
+    } catch (err) {
+        console.warn('Error leyendo snapshot:', err);
     }
     updateSyncIndicator(false);
 }
 
-function buildPollFromBrowserConfig(votingConfig, rawResults, key) {
-    const contestants = (votingConfig.contestants || []).filter(c => !c.deleted);
-    let totalActiveVotes = 0;
-
-    const formatted = contestants.map(c => {
-        const votes = typeof rawResults[c.id] === 'number' ? rawResults[c.id] : 0;
-        totalActiveVotes += votes;
-        let img = c.image || '';
-        if (img && !img.startsWith('http')) {
-            img = BASE_TVAZTECA + (img.startsWith('/') ? '' : '/') + img;
-        }
-        return {
-            id: c.id,
-            name: c.name || 'Participante',
-            image: img,
-            votes
-        };
-    }).sort((a, b) => b.votes - a.votes);
-
-    formatted.forEach((c, idx) => {
-        c.rank = idx + 1;
-        c.percentage = totalActiveVotes > 0 ? Number(((c.votes / totalActiveVotes) * 100).toFixed(2)) : 0;
-    });
-
-    const maxVotes = votingConfig.maxVotes || 10;
-    return {
-        key,
-        configId: votingConfig.configId,
-        internalName: votingConfig.name || '',
-        title: votingConfig.title || 'Votación Activa',
-        subtitle: String(votingConfig.subtitle || '').replace('{n}', String(maxVotes)),
-        maxVotes,
-        accentColor: votingConfig.accentColor || '#da07c8',
-        extraColor: votingConfig.extraColor || '#d5d546',
-        totalActiveVotes,
-        contestants: formatted,
-        rawResults
-    };
-}
-
-async function tryCorsFetchJson(url) {
-    const proxies = [
-        (u) => u,
-        (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-        (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
-    ];
-
-    for (const buildUrl of proxies) {
-        try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 3500);
-            const r = await fetch(buildUrl(url), { signal: controller.signal, cache: 'no-store' });
-            clearTimeout(timeout);
-            if (r.ok) {
-                const data = await r.json();
-                if (data && typeof data === 'object' && !data.error) {
-                    return data;
-                }
-            }
-        } catch (_) {}
-    }
-    return null;
-}
-
 function processIncomingData(data, isInitial) {
     state.data = data;
+    const isClosed = data.status && data.status.votingOpen === false;
 
-    // Calcular incrementos de votos en tiempo real
     const deltas = {};
     let totalGlobalVotes = 0;
     let totalGlobalDelta = 0;
@@ -209,16 +135,18 @@ function processIncomingData(data, isInitial) {
             if (prev !== undefined && c.votes > prev) {
                 const diff = c.votes - prev;
                 deltas[key] = diff;
-                addVoteLog(poll.title, c.name, diff, c.votes);
+                if (!isClosed) {
+                    addVoteLog(poll.title, c.name, diff, c.votes);
+                }
             }
             state.prevVotes[key] = c.votes;
         });
     });
 
-    renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta);
+    renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed);
     renderTabs(data.polls);
-    renderPolls(data.polls, deltas);
-    renderLogs();
+    renderPolls(data.polls, deltas, isClosed);
+    renderLogs(isClosed);
 }
 
 function addVoteLog(pollTitle, contestantName, diff, newTotal) {
@@ -233,8 +161,7 @@ function addVoteLog(pollTitle, contestantName, diff, newTotal) {
     if (state.logs.length > 25) state.logs.pop();
 }
 
-function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta) {
-    // Control de banner informativo de conexión
+function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed) {
     const banner = document.getElementById('live-mode-banner');
     const btnLocal = document.getElementById('btn-local-live');
     const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -243,7 +170,7 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta) {
         if (banner) banner.style.display = 'none';
         if (btnLocal) btnLocal.style.display = 'none';
     } else {
-        if (state.connectionMode.includes('Snapshot')) {
+        if (state.connectionMode.includes('Snapshot') && !isClosed) {
             if (banner) banner.style.display = 'flex';
         } else {
             if (banner) banner.style.display = 'none';
@@ -252,13 +179,27 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta) {
 
     const statusBadge = document.getElementById('status-badge');
     const statusText = document.getElementById('status-text');
+    const btnVote = document.getElementById('btn-vote-link');
+    const lblTotal = document.getElementById('kpi-label-total');
+
     if (statusBadge && statusText) {
-        if (data.status && data.status.votingOpen) {
+        if (!isClosed) {
             statusBadge.classList.remove('closed');
             statusText.textContent = 'VOTACIÓN ABIERTA EN VIVO';
+            if (btnVote) {
+                btnVote.innerHTML = '🗳️ Ir a Votar en TV Azteca';
+                btnVote.style.opacity = '1';
+                btnVote.style.pointerEvents = 'auto';
+            }
+            if (lblTotal) lblTotal.textContent = 'Total Votos Acumulados (Hoy)';
         } else {
             statusBadge.classList.add('closed');
-            statusText.textContent = 'VOTACIÓN CERRADA';
+            statusText.textContent = '🔴 VOTACIÓN CERRADA · RESULTADOS FINALES';
+            if (btnVote) {
+                btnVote.innerHTML = '🔒 Votación Concluida';
+                btnVote.style.opacity = '0.75';
+            }
+            if (lblTotal) lblTotal.textContent = 'Total Votos Oficiales (Cierre Gala)';
         }
     }
 
@@ -267,61 +208,78 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta) {
 
     const elGlobalDelta = document.getElementById('kpi-global-delta');
     if (elGlobalDelta) {
-        if (totalGlobalDelta > 0) {
+        if (isClosed) {
+            elGlobalDelta.textContent = '✅ Resultados Oficiales Definitivos';
+        } else if (totalGlobalDelta > 0) {
             elGlobalDelta.innerHTML = `<span class="delta-pill">+${fmtNum(totalGlobalDelta)} votos nuevos</span>`;
         } else {
             elGlobalDelta.textContent = state.connectionMode;
         }
     }
 
-    // Líder Votación 1 (Dinámico según la etapa: Salvación, Capataz, Final, etc.)
+    // Líder / Ganador Votación 1
     if (data.polls[0] && data.polls[0].contestants[0]) {
         const p1 = data.polls[0];
         const leader1 = p1.contestants[0];
         const lbl1 = document.getElementById('kpi-leader1-label');
-        if (lbl1) lbl1.textContent = `1° Lugar · ${p1.title.slice(0, 28)}`;
+        if (lbl1) {
+            lbl1.textContent = isClosed 
+                ? '🏆 Salvada Oficial · 1° Lugar' 
+                : `1° Lugar · ${p1.title.slice(0, 24)}`;
+        }
         document.getElementById('kpi-leader1-name').textContent = leader1.name;
-        document.getElementById('kpi-leader1-sub').textContent = `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos)`;
+        document.getElementById('kpi-leader1-sub').textContent = isClosed
+            ? `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos) · SALVADA 🏆`
+            : `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos)`;
     }
 
-    // Líder Votación 2 (O información de la Votación 1 si solo hay 1 votación activa como en Gala de Eliminación/Salvación)
-    const card2 = document.getElementById('kpi-card-poll2');
+    // Segundo lugar / Eliminado
     const lbl2 = document.getElementById('kpi-leader2-label');
     if (data.polls[1] && data.polls[1].contestants[0]) {
         const p2 = data.polls[1];
         const leader2 = p2.contestants[0];
-        if (lbl2) lbl2.textContent = `1° Lugar · ${p2.title.slice(0, 28)}`;
+        if (lbl2) lbl2.textContent = `1° Lugar · ${p2.title.slice(0, 24)}`;
         document.getElementById('kpi-leader2-name').textContent = leader2.name;
         document.getElementById('kpi-leader2-sub').textContent = `${fmtPct(leader2.percentage)} (${fmtNum(leader2.votes)} votos)`;
     } else if (data.polls[0] && data.polls[0].contestants.length > 1) {
         const p1 = data.polls[0];
         const lastContestant = p1.contestants[p1.contestants.length - 1];
-        if (lbl2) lbl2.textContent = `En Riesgo (Menor Voto) · ${p1.title.slice(0, 20)}`;
+        if (lbl2) {
+            lbl2.textContent = isClosed 
+                ? '❌ 10° Participante Eliminado' 
+                : `En Riesgo (Menor Voto) · ${p1.title.slice(0, 20)}`;
+        }
         document.getElementById('kpi-leader2-name').textContent = lastContestant.name;
-        document.getElementById('kpi-leader2-sub').textContent = `${fmtPct(lastContestant.percentage)} (${fmtNum(lastContestant.votes)} votos)`;
+        document.getElementById('kpi-leader2-sub').textContent = isClosed
+            ? `${fmtPct(lastContestant.percentage)} (${fmtNum(lastContestant.votes)} votos) · ELIMINADO ❌`
+            : `${fmtPct(lastContestant.percentage)} (${fmtNum(lastContestant.votes)} votos)`;
     }
 
-    // Última sincronización
     const elLastSync = document.getElementById('kpi-last-sync');
     if (elLastSync) {
         const nowStr = new Date().toLocaleTimeString('es-MX', { hour12: false });
         elLastSync.textContent = nowStr;
     }
     const elMode = document.getElementById('kpi-sync-mode');
-    if (elMode) elMode.textContent = `Versión config: ${data.status?.configVersion || 'v2'}`;
+    if (elMode) {
+        elMode.textContent = isClosed
+            ? 'Gala de Eliminación Concluida'
+            : `Versión config: ${data.status?.configVersion || 'v2'}`;
+    }
 }
 
 function renderTabs(polls) {
     const container = document.getElementById('poll-tabs-container');
     if (!container) return;
 
+    const isClosed = state.data?.status?.votingOpen === false;
     const buttonsHtml = [];
     if (polls.length > 1) {
         buttonsHtml.push(`
             <button class="poll-tab-btn ${state.viewMode === 'dual' ? 'active' : ''}" onclick="setViewMode('dual')">
                 <div class="tab-title-wrap">
-                    <span class="tab-badge">VISTA COMPLETA</span>
-                    <span class="tab-main-title">Todas las Votaciones Activas (${polls.length})</span>
+                    <span class="tab-badge">${isClosed ? 'RESULTADOS FINALES' : 'VISTA COMPLETA'}</span>
+                    <span class="tab-main-title">Todas las Votaciones (${polls.length})</span>
                 </div>
                 <span class="tab-votes-count">${polls.length} Paneles</span>
             </button>
@@ -329,9 +287,12 @@ function renderTabs(polls) {
     }
 
     polls.forEach((poll, idx) => {
-        const label = poll.internalName
+        let label = poll.internalName
             ? poll.internalName.replace(/- LGVIP26.*/i, '').trim()
-            : `VOTACIÓN ACTIVA #${idx + 1}`;
+            : `VOTACIÓN #${idx + 1}`;
+        if (isClosed) {
+            label = '🏆 RESULTADO OFICIAL';
+        }
         buttonsHtml.push(`
             <button class="poll-tab-btn ${state.viewMode === poll.key || (polls.length === 1 && idx === 0) ? 'active' : ''}" onclick="setViewMode('${poll.key}')">
                 <div class="tab-title-wrap">
@@ -350,11 +311,11 @@ window.setViewMode = function(mode) {
     state.viewMode = mode;
     if (state.data) {
         renderTabs(state.data.polls);
-        renderPolls(state.data.polls, {});
+        renderPolls(state.data.polls, {}, state.data.status?.votingOpen === false);
     }
 };
 
-function renderPolls(polls, deltas) {
+function renderPolls(polls, deltas, isClosed) {
     const wrapper = document.getElementById('polls-wrapper');
     if (!wrapper) return;
 
@@ -367,35 +328,121 @@ function renderPolls(polls, deltas) {
         : 'polls-Wrapper';
 
     wrapper.innerHTML = visiblePolls.map((poll, idx) => {
-        const badgeLabel = poll.internalName
-            ? poll.internalName
-            : (idx === 0 ? 'VOTACIÓN PRINCIPAL EN CURSO' : 'VOTACIÓN SECUNDARIA EN CURSO');
         const isEliminationOrSave = /salv|nominad|elimin|favorito/i.test(poll.title + ' ' + poll.internalName);
+        const winner = poll.contestants[0];
+        const loser = poll.contestants[poll.contestants.length - 1];
+        const diffVotes = winner && loser && poll.contestants.length > 1 ? winner.votes - loser.votes : 0;
+
+        let badgeLabel = poll.internalName
+            ? poll.internalName
+            : (idx === 0 ? 'VOTACIÓN PRINCIPAL' : 'VOTACIÓN SECUNDARIA');
+
+        let displayTitle = poll.title;
+        let displaySubtitle = poll.subtitle;
+
+        if (isClosed) {
+            badgeLabel = '🏆 RESULTADOS OFICIALES DEFINITIVOS · GALA DE ELIMINACIÓN';
+            if (isEliminationOrSave) {
+                displayTitle = '🏆 Resultados Finales: Salvación de Granjeros';
+                displaySubtitle = `Votación concluida al término de la gala por Azteca UNO · Total: ${fmtNum(poll.totalActiveVotes)} votos auditados.`;
+            } else {
+                displayTitle = `Resultado Oficial: ${poll.title}`;
+                displaySubtitle = `Votación finalizada con ${fmtNum(poll.totalActiveVotes)} votos registrados.`;
+            }
+        }
+
+        // Veredicto final destacado cuando la votación ya cerró
+        let verdictCardHtml = '';
+        if (isClosed && winner && loser && poll.contestants.length >= 2 && isEliminationOrSave) {
+            verdictCardHtml = `
+                <div class="final-verdict-card">
+                    <div class="verdict-header">
+                        <span class="verdict-closed-tag">
+                            <span class="verdict-closed-dot"></span>
+                            Veredicto Oficial · Gala de Eliminación
+                        </span>
+                        <span class="verdict-notice">Votación cerrada al 100% · Cifras definitivas TV Azteca</span>
+                    </div>
+                    <div class="verdict-grid">
+                        <div class="verdict-col winner">
+                            <div class="verdict-avatar-wrap">
+                                <img class="verdict-avatar" src="${escapeHtml(winner.image)}" alt="${escapeHtml(winner.name)}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(winner.name)}&background=10b981&color=fff'">
+                                <span class="verdict-crown">👑</span>
+                            </div>
+                            <div class="verdict-details">
+                                <span class="verdict-pill-win">🏆 SALVADA POR EL PÚBLICO</span>
+                                <h4>${escapeHtml(winner.name)}</h4>
+                                <div class="verdict-stats">
+                                    <strong>${fmtPct(winner.percentage)}</strong> (${fmtNum(winner.votes)} votos)<br>
+                                    Asegura su permanencia oficial en La Granja VIP
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="verdict-col loser">
+                            <div class="verdict-avatar-wrap">
+                                <img class="verdict-avatar" src="${escapeHtml(loser.image)}" alt="${escapeHtml(loser.name)}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(loser.name)}&background=ef4444&color=fff'">
+                                <span class="verdict-skull">❌</span>
+                            </div>
+                            <div class="verdict-details">
+                                <span class="verdict-pill-lose">❌ 10° PARTICIPANTE ELIMINADO</span>
+                                <h4>${escapeHtml(loser.name)}</h4>
+                                <div class="verdict-stats">
+                                    <strong>${fmtPct(loser.percentage)}</strong> (${fmtNum(loser.votes)} votos)<br>
+                                    Concluye su participación (Diferencia: -${fmtNum(diffVotes)} votos)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
         const cardsHtml = poll.contestants.map((c, cIdx) => {
             const key = `${poll.configId}_${c.id}`;
             const delta = deltas[key] || 0;
-            const deltaHtml = delta > 0
+            const deltaHtml = delta > 0 && !isClosed
                 ? `<span class="delta-pill">+${fmtNum(delta)}</span>`
                 : '';
 
             let statusTag = 'En competencia';
-            if (c.rank === 1) {
-                statusTag = isEliminationOrSave
-                    ? '🔥 Líder en votos del público (Mayor apoyo)'
-                    : '🔥 1° Lugar actual en la votación';
-            } else if (c.rank === poll.contestants.length && poll.contestants.length > 2 && isEliminationOrSave) {
-                statusTag = '⚠️ En zona de peligro (Menor porcentaje de votos)';
-            } else if (c.rank > 1) {
-                const diffLeader = poll.contestants[0].votes - c.votes;
-                statusTag = `A ${fmtNum(diffLeader)} votos del 1° lugar`;
+            let cardExtraClass = '';
+
+            if (isClosed) {
+                cardExtraClass = 'is-closed ';
+                if (c.rank === 1) {
+                    cardExtraClass += 'rank-1 ';
+                    statusTag = isEliminationOrSave
+                        ? '<span class="status-pill-saved">🏆 SALVADA DEFINITIVA · Continúa en la competencia</span>'
+                        : '<span class="status-pill-saved">👑 GANADOR OFICIAL DE LA VOTACIÓN</span>';
+                } else if (c.rank === poll.contestants.length && poll.contestants.length > 1) {
+                    cardExtraClass += 'rank-last ';
+                    const diffLeader = poll.contestants[0].votes - c.votes;
+                    statusTag = isEliminationOrSave
+                        ? `<span class="status-pill-eliminated">❌ ELIMINADO DE LA COMPETENCIA (Diferencia: -${fmtNum(diffLeader)} votos)</span>`
+                        : `<span class="status-pill-eliminated">Diferencia con el ganador: -${fmtNum(diffLeader)} votos</span>`;
+                } else {
+                    const diffLeader = poll.contestants[0].votes - c.votes;
+                    statusTag = `Posición #${c.rank} (-${fmtNum(diffLeader)} votos del 1° lugar)`;
+                }
+            } else {
+                if (c.rank === 1) {
+                    statusTag = isEliminationOrSave
+                        ? '🔥 Líder en votos del público (Mayor apoyo)'
+                        : '🔥 1° Lugar actual en la votación';
+                } else if (c.rank === poll.contestants.length && poll.contestants.length > 2 && isEliminationOrSave) {
+                    statusTag = '⚠️ En zona de peligro (Menor porcentaje de votos)';
+                } else if (c.rank > 1) {
+                    const diffLeader = poll.contestants[0].votes - c.votes;
+                    statusTag = `A ${fmtNum(diffLeader)} votos del 1° lugar`;
+                }
             }
 
             return `
-                <div class="contestant-card rank-${c.rank}">
+                <div class="contestant-card rank-${c.rank} ${cardExtraClass}">
                     <div class="contestant-top">
                         <div class="contestant-identity">
-                            <div class="rank-badge">#${c.rank}</div>
+                            <div class="rank-badge">${isClosed && c.rank === 1 ? '👑' : '#' + c.rank}</div>
                             <img class="contestant-avatar" src="${escapeHtml(c.image)}" alt="${escapeHtml(c.name)}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=da07c8&color=fff'">
                             <div>
                                 <div class="contestant-name">${escapeHtml(c.name)}</div>
@@ -406,7 +453,7 @@ function renderPolls(polls, deltas) {
                             <div class="percentage-big">${fmtPct(c.percentage)}</div>
                             <div class="votes-exact">
                                 ${deltaHtml}
-                                <span>${fmtNum(c.votes)} votos</span>
+                                <span>${fmtNum(c.votes)} votos oficiales</span>
                             </div>
                         </div>
                     </div>
@@ -421,15 +468,18 @@ function renderPolls(polls, deltas) {
             <section class="poll-section">
                 <div class="poll-header">
                     <div>
-                        <span class="poll-tag">${badgeLabel}</span>
-                        <h2>${escapeHtml(poll.title)}</h2>
-                        <p class="poll-subtitle">${escapeHtml(poll.subtitle)} · ID: <code>${poll.configId.slice(0, 8)}</code></p>
+                        <span class="poll-tag ${isClosed ? 'closed' : ''}">${escapeHtml(badgeLabel)}</span>
+                        <h2>${escapeHtml(displayTitle)}</h2>
+                        <p class="poll-subtitle">${escapeHtml(displaySubtitle)} · ID: <code>${poll.configId.slice(0, 8)}</code></p>
                     </div>
                     <div class="poll-total-box">
-                        <span>Votos Totales</span>
+                        <span>${isClosed ? 'Votos Totales Auditados' : 'Votos Totales'}</span>
                         <strong>${fmtNum(poll.totalActiveVotes)}</strong>
                     </div>
                 </div>
+
+                ${verdictCardHtml}
+
                 <div class="contestants-list">
                     ${cardsHtml}
                 </div>
@@ -440,7 +490,6 @@ function renderPolls(polls, deltas) {
         `;
     }).join('');
 
-    // Renderizar gráficas con Chart.js si está disponible
     if (window.Chart) {
         visiblePolls.forEach(poll => renderPollChart(poll));
     }
@@ -458,10 +507,10 @@ function renderPollChart(poll) {
     const labels = poll.contestants.map(c => c.name);
     const dataVotes = poll.contestants.map(c => c.votes);
     const colors = [
-        '#f59e0b',
-        '#da07c8',
-        '#06b6d4',
         '#10b981',
+        '#ef4444',
+        '#f59e0b',
+        '#06b6d4',
         '#8b5cf6',
         '#ec4899',
         '#64748b'
@@ -472,7 +521,7 @@ function renderPollChart(poll) {
         data: {
             labels,
             datasets: [{
-                label: 'Votos acumulados',
+                label: 'Votos Finales Auditados',
                 data: dataVotes,
                 backgroundColor: colors.slice(0, labels.length),
                 borderRadius: 8,
@@ -487,7 +536,7 @@ function renderPollChart(poll) {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (context) => ` ${fmtNum(context.raw)} votos`
+                        label: (context) => ` ${fmtNum(context.raw)} votos oficiales`
                     }
                 }
             },
@@ -508,9 +557,27 @@ function renderPollChart(poll) {
     });
 }
 
-function renderLogs() {
+function renderLogs(isClosed) {
     const list = document.getElementById('live-log-list');
     if (!list) return;
+
+    if (isClosed) {
+        list.innerHTML = `
+            <li class="log-item" style="border-left-color: #10b981;">
+                <span><strong>Ivonne Montero</strong> fue salvada por el público con el 55.36% de apoyo</span>
+                <span style="color:#34d399">Salvada</span>
+            </li>
+            <li class="log-item" style="border-left-color: #ef4444;">
+                <span><strong>Rafa Mercadante</strong> es el 10° participante eliminado de la competencia</span>
+                <span style="color:#f87171">Eliminado</span>
+            </li>
+            <li class="log-item">
+                <span>Votación cerrada al 100% de escrutinio con 68,900,283 votos totales</span>
+                <span style="color:#94a3b8">Oficial</span>
+            </li>
+        `;
+        return;
+    }
 
     if (state.logs.length === 0) {
         list.innerHTML = `<li class="log-item"><span>Esperando nuevos votos en tiempo real...</span><span>En vivo</span></li>`;

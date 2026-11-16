@@ -1,16 +1,16 @@
 {
     "ok": true,
-    "timestamp": "2026-11-15T21:20:12.904717Z",
-    "localTime": "2026-11-15 16:20:12",
+    "timestamp": "2026-11-16T16:36:49Z",
+    "localTime": "2026-11-16 16:36:49",
     "sourceUrl": "https://www.tvazteca.com/aztecauno/la-granja-votaciones/vota/",
     "apiEndpoint": "https://vota.tvazteca.com",
     "programTitle": "¡Vota en La Granja VIP Segunda Temporada por tu granjero favorito!",
     "logo": "https://vota.tvazteca.com/uploads/logo-lagranja-vip_1788930541985.png",
     "status": {
         "active": true,
-        "votingOpen": true,
+        "votingOpen": false,
         "votingClosedText": "¡Votación cerrada! No te pierdas el programa de Lunes a Viernes a las 8:30 p.m. y Domingos a las 8:00 p.m por Azteca UNO.",
-        "configVersion": "853d6d18c10968db"
+        "configVersion": "aa62113a8103f6d9"
     },
     "polls": [
         {
@@ -22,55 +22,40 @@
             "maxVotes": 10,
             "accentColor": "#da07c8",
             "extraColor": "#d5d546",
-            "totalActiveVotes": 193064871,
-            "totalRawVotes": 197007685,
+            "totalActiveVotes": 68900283,
+            "totalRawVotes": 268745225,
             "contestants": [
                 {
-                    "id": "24789d08-876d-4633-b4d1-3ad1068edf4d",
-                    "name": "Niurka",
-                    "image": "https://vota.tvazteca.com/uploads/Niurka_1791475972388.jpg",
-                    "votes": 85137060,
+                    "id": "d4c89408-a283-4167-a56d-cf8d53066002",
+                    "name": "Ivonne Montero",
+                    "image": "https://vota.tvazteca.com/uploads/Ivonne_Montero_1788994702875.jpg",
+                    "votes": 38139904,
                     "rank": 1,
-                    "percentage": 44.1
-                },
-                {
-                    "id": "f4949176-08ce-4082-ba21-9419f8bc19f9",
-                    "name": "Bebeshita",
-                    "image": "https://vota.tvazteca.com/uploads/Bebeshita_1793582000320.jpg",
-                    "votes": 74109016,
-                    "rank": 2,
-                    "percentage": 38.39
+                    "percentage": 55.36
                 },
                 {
                     "id": "3e151f8b-7872-4a84-9179-28d8e6467814",
                     "name": "Rafa Mercadante",
                     "image": "https://vota.tvazteca.com/uploads/Rafael_1794457587626.jpg",
-                    "votes": 22217048,
-                    "rank": 3,
-                    "percentage": 11.51
-                },
-                {
-                    "id": "d4c89408-a283-4167-a56d-cf8d53066002",
-                    "name": "Ivonne Montero",
-                    "image": "https://vota.tvazteca.com/uploads/Ivonne_Montero_1788994702875.jpg",
-                    "votes": 11601747,
-                    "rank": 4,
-                    "percentage": 6.01
+                    "votes": 30760379,
+                    "rank": 2,
+                    "percentage": 44.64
                 }
             ],
             "rawResults": {
                 "00000000-0000-0000-0000-000000000000": 20,
                 "0aa4019d-922b-4930-8372-ce05e078a74e": 155,
-                "24789d08-876d-4633-b4d1-3ad1068edf4d": 85137060,
-                "3e151f8b-7872-4a84-9179-28d8e6467814": 22217048,
+                "24789d08-876d-4633-b4d1-3ad1068edf4d": 110708411,
+                "3e151f8b-7872-4a84-9179-28d8e6467814": 30760379,
                 "409ab39f-6b58-4bf3-8d11-11de4dcfcc50": 3,
                 "4d7f35ae-6c19-4e66-bf3b-4d81f9b1458f": 22,
-                "953f2032-c90a-4739-98ac-7f555c3080c6": 107399,
-                "d4c89408-a283-4167-a56d-cf8d53066002": 11601747,
-                "d7443d5a-945f-45a4-8560-a7aa8324c21b": 3835165,
+                "831bf043-46c1-4129-89c2-e42193041921": 1,
+                "953f2032-c90a-4739-98ac-7f555c3080c6": 107409,
+                "d4c89408-a283-4167-a56d-cf8d53066002": 38139904,
+                "d7443d5a-945f-45a4-8560-a7aa8324c21b": 3835170,
                 "ebfd487f-5128-4515-a847-36a1a5c2643c": 10,
                 "f493bca4-977a-4a1e-95b2-0083977adea1": 1,
-                "f4949176-08ce-4082-ba21-9419f8bc19f9": 74109016,
+                "f4949176-08ce-4082-ba21-9419f8bc19f9": 85193701,
                 "f853cddb-9df6-4238-b3ca-2506caee8359": 9,
                 "x'": 10,
                 "x' AND SLEEP(5)#": 10,
