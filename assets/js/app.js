@@ -1,11 +1,12 @@
 /**
  * Motor de Monitoreo - La Granja VIP (Segunda Temporada)
- * Soporta actualización en tiempo real en Vercel, Laragon local y GitHub Pages,
- * y genera una presentación de RESULTADOS FINALES DEFINITIVOS cuando la votación concluye.
+ * Soporta actualización en tiempo real en Vercel, Laragon local y GitHub Pages.
+ * Incluye protección contra rollback/caché y presentación dinámica de resultados.
  */
 
 const state = {
     data: null,
+    lastConfigId: '',
     prevVotes: {},
     prevTotals: {},
     viewMode: 'dual',
@@ -15,8 +16,6 @@ const state = {
     logs: [],
     connectionMode: 'Detectando...'
 };
-
-const BASE_TVAZTECA = 'https://vota.tvazteca.com';
 
 const fmtNum = (n) => new Intl.NumberFormat('es-MX').format(Number(n) || 0);
 const fmtPct = (n) => Number(n || 0).toFixed(2) + '%';
@@ -57,26 +56,39 @@ function startAutoRefresh() {
 async function fetchLiveVotes(isInitial = false) {
     updateSyncIndicator(true);
 
-    // 1. Probar endpoints dinámicos (Vercel Serverless / Laragon PHP)
-    const endpointsToTry = ['api/live', 'api/live.php'];
-    if (window.location.hostname.includes('github.io')) {
+    // 1. Probar endpoints dinámicos en tiempo real con prioridad
+    const endpointsToTry = [];
+    
+    // Si estamos en Vercel o en local, las rutas relativas responden directo
+    endpointsToTry.push('api/live');
+    endpointsToTry.push('api/live.php');
+
+    // Si estamos en GitHub Pages o cualquier otro host, consultar SIEMPRE la API viva de Vercel (sin CORS)
+    if (!window.location.hostname.includes('vercel.app')) {
+        endpointsToTry.push('https://la-granja-vip-votaciones.vercel.app/api/live');
+    }
+
+    // Si corre en localhost con Laragon
+    if (window.location.hostname.includes('github.io') || window.location.hostname === 'localhost') {
         endpointsToTry.push('http://localhost/la_granja_vip_votaciones/api/live.php');
     }
 
     for (const ep of endpointsToTry) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2200);
+            // Tiempo de espera generoso (6s) para cubrir arranques en frío de funciones serverless
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
             const resp = await fetch(`${ep}?_t=${Date.now()}`, { 
                 signal: controller.signal, 
                 cache: 'no-store' 
             });
             clearTimeout(timeoutId);
+
             if (resp.ok) {
                 const contentType = resp.headers.get('content-type') || '';
                 if (contentType.includes('application/json')) {
                     const json = await resp.json();
-                    if (json && json.ok && Array.isArray(json.polls)) {
+                    if (json && json.ok && Array.isArray(json.polls) && json.polls.length > 0) {
                         state.connectionMode = ep.includes('localhost') 
                             ? '🟢 Motor Local Activo (Laragon)' 
                             : '🟢 Servidor Cloud en Vivo';
@@ -89,18 +101,25 @@ async function fetchLiveVotes(isInitial = false) {
         } catch (_) {}
     }
 
-    // 2. Snapshot estático (GitHub Pages)
+    // 2. Snapshot estático (Respaldo de emergencia)
     try {
         const snapResp = await fetch(`data/snapshot.json?_t=${Date.now()}`, { cache: 'no-store' });
         if (snapResp.ok) {
             const snapshot = await snapResp.json();
-            if (snapshot && snapshot.ok && Array.isArray(snapshot.polls)) {
+            if (snapshot && snapshot.ok && Array.isArray(snapshot.polls) && snapshot.polls.length > 0) {
+                const snapConfigId = snapshot.polls[0]?.configId || '';
+                // Protección contra rollback: no degradar a un snapshot viejo si ya tenemos una votación activa más reciente
+                if (state.lastConfigId && snapConfigId && state.lastConfigId !== snapConfigId && state.data?.status?.votingOpen) {
+                    updateSyncIndicator(false);
+                    return;
+                }
+
                 let timeText = '';
                 if (snapshot.timestamp) {
                     const dateObj = new Date(snapshot.timestamp);
                     timeText = ` (${dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`;
                 }
-                state.connectionMode = `☁️ Snapshot Oficial Sincronizado${timeText}`;
+                state.connectionMode = `☁️ Snapshot Sincronizado${timeText}`;
                 processIncomingData(snapshot, isInitial);
                 updateSyncIndicator(false);
                 return;
@@ -113,8 +132,23 @@ async function fetchLiveVotes(isInitial = false) {
 }
 
 function processIncomingData(data, isInitial) {
-    state.data = data;
     const isClosed = data.status && data.status.votingOpen === false;
+    const currentConfigId = data.polls && data.polls[0] ? data.polls[0].configId : '';
+
+    // Si cambió la placa o ID de votación (ej. de salvación a duelo de nominación)
+    if (state.lastConfigId && currentConfigId && state.lastConfigId !== currentConfigId) {
+        state.prevVotes = {};
+        state.prevTotals = {};
+        state.logs = [];
+        Object.keys(state.charts).forEach(k => {
+            if (state.charts[k]) {
+                state.charts[k].destroy();
+                delete state.charts[k];
+            }
+        });
+    }
+    state.lastConfigId = currentConfigId;
+    state.data = data;
 
     const deltas = {};
     let totalGlobalVotes = 0;
@@ -146,7 +180,7 @@ function processIncomingData(data, isInitial) {
     renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed);
     renderTabs(data.polls);
     renderPolls(data.polls, deltas, isClosed);
-    renderLogs(isClosed);
+    renderLogs(isClosed, data.polls[0]);
 }
 
 function addVoteLog(pollTitle, contestantName, diff, newTotal) {
@@ -217,23 +251,23 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed)
         }
     }
 
-    // Líder / Ganador Votación 1
+    // Líder / 1° Lugar Votación 1
     if (data.polls[0] && data.polls[0].contestants[0]) {
         const p1 = data.polls[0];
         const leader1 = p1.contestants[0];
         const lbl1 = document.getElementById('kpi-leader1-label');
         if (lbl1) {
             lbl1.textContent = isClosed 
-                ? '🏆 Salvada Oficial · 1° Lugar' 
+                ? '🏆 1° Lugar Oficial' 
                 : `1° Lugar · ${p1.title.slice(0, 24)}`;
         }
         document.getElementById('kpi-leader1-name').textContent = leader1.name;
         document.getElementById('kpi-leader1-sub').textContent = isClosed
-            ? `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos) · SALVADA 🏆`
+            ? `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos) · 1° Lugar`
             : `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos)`;
     }
 
-    // Segundo lugar / Eliminado
+    // Segundo lugar / En Riesgo / Último lugar
     const lbl2 = document.getElementById('kpi-leader2-label');
     if (data.polls[1] && data.polls[1].contestants[0]) {
         const p2 = data.polls[1];
@@ -246,12 +280,12 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed)
         const lastContestant = p1.contestants[p1.contestants.length - 1];
         if (lbl2) {
             lbl2.textContent = isClosed 
-                ? '❌ 10° Participante Eliminado' 
-                : `En Riesgo (Menor Voto) · ${p1.title.slice(0, 20)}`;
+                ? 'Última Posición' 
+                : 'En Riesgo / Última Posición';
         }
         document.getElementById('kpi-leader2-name').textContent = lastContestant.name;
         document.getElementById('kpi-leader2-sub').textContent = isClosed
-            ? `${fmtPct(lastContestant.percentage)} (${fmtNum(lastContestant.votes)} votos) · ELIMINADO ❌`
+            ? `${fmtPct(lastContestant.percentage)} (${fmtNum(lastContestant.votes)} votos)`
             : `${fmtPct(lastContestant.percentage)} (${fmtNum(lastContestant.votes)} votos)`;
     }
 
@@ -263,7 +297,7 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed)
     const elMode = document.getElementById('kpi-sync-mode');
     if (elMode) {
         elMode.textContent = isClosed
-            ? 'Gala de Eliminación Concluida'
+            ? 'Votación Concluida'
             : `Versión config: ${data.status?.configVersion || 'v2'}`;
     }
 }
@@ -341,25 +375,23 @@ function renderPolls(polls, deltas, isClosed) {
         let displaySubtitle = poll.subtitle;
 
         if (isClosed) {
-            badgeLabel = '🏆 RESULTADOS OFICIALES DEFINITIVOS · GALA DE ELIMINACIÓN';
-            if (isEliminationOrSave) {
-                displayTitle = '🏆 Resultados Finales: Salvación de Granjeros';
-                displaySubtitle = `Votación concluida al término de la gala por Azteca UNO · Total: ${fmtNum(poll.totalActiveVotes)} votos auditados.`;
-            } else {
-                displayTitle = `Resultado Oficial: ${poll.title}`;
-                displaySubtitle = `Votación finalizada con ${fmtNum(poll.totalActiveVotes)} votos registrados.`;
-            }
+            badgeLabel = '🏆 RESULTADOS OFICIALES DEFINITIVOS';
+            displayTitle = `Resultado Oficial: ${poll.title.replace(/^¡Vota (para|por) /i, '').replace(/!$/, '')}`;
+            displaySubtitle = `Votación concluida al término del programa por Azteca UNO · Total: ${fmtNum(poll.totalActiveVotes)} votos auditados.`;
         }
 
         // Veredicto final destacado cuando la votación ya cerró
         let verdictCardHtml = '';
-        if (isClosed && winner && loser && poll.contestants.length >= 2 && isEliminationOrSave) {
+        if (isClosed && winner && loser && poll.contestants.length >= 2) {
+            const winPill = isEliminationOrSave ? '🏆 SALVADA / SALVADO POR EL PÚBLICO' : '👑 1° LUGAR DE LA VOTACIÓN';
+            const losePill = isEliminationOrSave ? '❌ PARTICIPANTE ELIMINADO' : 'MENOR VOTACIÓN REGISTRADA';
+
             verdictCardHtml = `
                 <div class="final-verdict-card">
                     <div class="verdict-header">
                         <span class="verdict-closed-tag">
                             <span class="verdict-closed-dot"></span>
-                            Veredicto Oficial · Gala de Eliminación
+                            Veredicto Oficial · Votación Cerrada
                         </span>
                         <span class="verdict-notice">Votación cerrada al 100% · Cifras definitivas TV Azteca</span>
                     </div>
@@ -370,11 +402,11 @@ function renderPolls(polls, deltas, isClosed) {
                                 <span class="verdict-crown">👑</span>
                             </div>
                             <div class="verdict-details">
-                                <span class="verdict-pill-win">🏆 SALVADA POR EL PÚBLICO</span>
+                                <span class="verdict-pill-win">${winPill}</span>
                                 <h4>${escapeHtml(winner.name)}</h4>
                                 <div class="verdict-stats">
                                     <strong>${fmtPct(winner.percentage)}</strong> (${fmtNum(winner.votes)} votos)<br>
-                                    Asegura su permanencia oficial en La Granja VIP
+                                    Mayor respaldo obtenido en esta votación
                                 </div>
                             </div>
                         </div>
@@ -385,11 +417,11 @@ function renderPolls(polls, deltas, isClosed) {
                                 <span class="verdict-skull">❌</span>
                             </div>
                             <div class="verdict-details">
-                                <span class="verdict-pill-lose">❌ 10° PARTICIPANTE ELIMINADO</span>
+                                <span class="verdict-pill-lose">${losePill}</span>
                                 <h4>${escapeHtml(loser.name)}</h4>
                                 <div class="verdict-stats">
                                     <strong>${fmtPct(loser.percentage)}</strong> (${fmtNum(loser.votes)} votos)<br>
-                                    Concluye su participación (Diferencia: -${fmtNum(diffVotes)} votos)
+                                    Diferencia con el 1° lugar: -${fmtNum(diffVotes)} votos
                                 </div>
                             </div>
                         </div>
@@ -398,7 +430,7 @@ function renderPolls(polls, deltas, isClosed) {
             `;
         }
 
-        const cardsHtml = poll.contestants.map((c, cIdx) => {
+        const cardsHtml = poll.contestants.map((c) => {
             const key = `${poll.configId}_${c.id}`;
             const delta = deltas[key] || 0;
             const deltaHtml = delta > 0 && !isClosed
@@ -412,26 +444,20 @@ function renderPolls(polls, deltas, isClosed) {
                 cardExtraClass = 'is-closed ';
                 if (c.rank === 1) {
                     cardExtraClass += 'rank-1 ';
-                    statusTag = isEliminationOrSave
-                        ? '<span class="status-pill-saved">🏆 SALVADA DEFINITIVA · Continúa en la competencia</span>'
-                        : '<span class="status-pill-saved">👑 GANADOR OFICIAL DE LA VOTACIÓN</span>';
+                    statusTag = '<span class="status-pill-saved">👑 1° LUGAR OFICIAL · Mayor votación</span>';
                 } else if (c.rank === poll.contestants.length && poll.contestants.length > 1) {
                     cardExtraClass += 'rank-last ';
                     const diffLeader = poll.contestants[0].votes - c.votes;
-                    statusTag = isEliminationOrSave
-                        ? `<span class="status-pill-eliminated">❌ ELIMINADO DE LA COMPETENCIA (Diferencia: -${fmtNum(diffLeader)} votos)</span>`
-                        : `<span class="status-pill-eliminated">Diferencia con el ganador: -${fmtNum(diffLeader)} votos</span>`;
+                    statusTag = `<span class="status-pill-eliminated">Diferencia con el 1° lugar: -${fmtNum(diffLeader)} votos</span>`;
                 } else {
                     const diffLeader = poll.contestants[0].votes - c.votes;
                     statusTag = `Posición #${c.rank} (-${fmtNum(diffLeader)} votos del 1° lugar)`;
                 }
             } else {
                 if (c.rank === 1) {
-                    statusTag = isEliminationOrSave
-                        ? '🔥 Líder en votos del público (Mayor apoyo)'
-                        : '🔥 1° Lugar actual en la votación';
-                } else if (c.rank === poll.contestants.length && poll.contestants.length > 2 && isEliminationOrSave) {
-                    statusTag = '⚠️ En zona de peligro (Menor porcentaje de votos)';
+                    statusTag = '🔥 1° Lugar actual en la votación (Mayor apoyo)';
+                } else if (c.rank === poll.contestants.length && poll.contestants.length > 2) {
+                    statusTag = '⚠️ Menor porcentaje registrado';
                 } else if (c.rank > 1) {
                     const diffLeader = poll.contestants[0].votes - c.votes;
                     statusTag = `A ${fmtNum(diffLeader)} votos del 1° lugar`;
@@ -453,7 +479,7 @@ function renderPolls(polls, deltas, isClosed) {
                             <div class="percentage-big">${fmtPct(c.percentage)}</div>
                             <div class="votes-exact">
                                 ${deltaHtml}
-                                <span>${fmtNum(c.votes)} votos oficiales</span>
+                                <span>${fmtNum(c.votes)} votos</span>
                             </div>
                         </div>
                     </div>
@@ -508,11 +534,11 @@ function renderPollChart(poll) {
     const dataVotes = poll.contestants.map(c => c.votes);
     const colors = [
         '#10b981',
-        '#ef4444',
         '#f59e0b',
         '#06b6d4',
         '#8b5cf6',
         '#ec4899',
+        '#ef4444',
         '#64748b'
     ];
 
@@ -521,7 +547,7 @@ function renderPollChart(poll) {
         data: {
             labels,
             datasets: [{
-                label: 'Votos Finales Auditados',
+                label: 'Votos Registrados',
                 data: dataVotes,
                 backgroundColor: colors.slice(0, labels.length),
                 borderRadius: 8,
@@ -536,7 +562,7 @@ function renderPollChart(poll) {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (context) => ` ${fmtNum(context.raw)} votos oficiales`
+                        label: (context) => ` ${fmtNum(context.raw)} votos`
                     }
                 }
             },
@@ -557,22 +583,24 @@ function renderPollChart(poll) {
     });
 }
 
-function renderLogs(isClosed) {
+function renderLogs(isClosed, poll) {
     const list = document.getElementById('live-log-list');
     if (!list) return;
 
-    if (isClosed) {
+    if (isClosed && poll && poll.contestants && poll.contestants.length > 0) {
+        const winner = poll.contestants[0];
+        const loser = poll.contestants[poll.contestants.length - 1];
         list.innerHTML = `
             <li class="log-item" style="border-left-color: #10b981;">
-                <span><strong>Ivonne Montero</strong> fue salvada por el público con el 55.36% de apoyo</span>
-                <span style="color:#34d399">Salvada</span>
+                <span><strong>${escapeHtml(winner.name)}</strong> obtuvo la mayor votación con el ${fmtPct(winner.percentage)} (${fmtNum(winner.votes)} votos)</span>
+                <span style="color:#34d399">1° Lugar</span>
             </li>
             <li class="log-item" style="border-left-color: #ef4444;">
-                <span><strong>Rafa Mercadante</strong> es el 10° participante eliminado de la competencia</span>
-                <span style="color:#f87171">Eliminado</span>
+                <span><strong>${escapeHtml(loser.name)}</strong> concluyó con el ${fmtPct(loser.percentage)} (${fmtNum(loser.votes)} votos)</span>
+                <span style="color:#f87171">Último</span>
             </li>
             <li class="log-item">
-                <span>Votación cerrada al 100% de escrutinio con 68,900,283 votos totales</span>
+                <span>Votación cerrada al 100% de escrutinio con ${fmtNum(poll.totalActiveVotes)} votos totales</span>
                 <span style="color:#94a3b8">Oficial</span>
             </li>
         `;
@@ -580,13 +608,13 @@ function renderLogs(isClosed) {
     }
 
     if (state.logs.length === 0) {
-        list.innerHTML = `<li class="log-item"><span>Esperando nuevos votos en tiempo real...</span><span>En vivo</span></li>`;
+        list.innerHTML = `<li class="log-item"><span>Votación en vivo activa. Esperando nuevos registros de votos...</span><span>En vivo</span></li>`;
         return;
     }
 
     list.innerHTML = state.logs.map(item => `
         <li class="log-item">
-            <span><strong>${escapeHtml(item.contestantName)}</strong> sumó <span class="delta-pill">+${fmtNum(item.diff)}</span> (${escapeHtml(item.pollTitle.slice(0, 28))}...)</span>
+            <span><strong>${escapeHtml(item.contestantName)}</strong> sumó <span class="delta-pill">+${fmtNum(item.diff)}</span> (${escapeHtml(item.pollTitle.slice(0, 24))}...)</span>
             <span style="color:#94a3b8">${item.time}</span>
         </li>
     `).join('');

@@ -1,65 +1,86 @@
 {
     "ok": true,
-    "timestamp": "2026-11-16T16:36:49Z",
-    "localTime": "2026-11-16 16:36:49",
+    "timestamp": "2026-11-17T15:43:05Z",
+    "localTime": "2026-11-17 15:43:05",
     "sourceUrl": "https://www.tvazteca.com/aztecauno/la-granja-votaciones/vota/",
     "apiEndpoint": "https://vota.tvazteca.com",
     "programTitle": "¡Vota en La Granja VIP Segunda Temporada por tu granjero favorito!",
     "logo": "https://vota.tvazteca.com/uploads/logo-lagranja-vip_1788930541985.png",
     "status": {
         "active": true,
-        "votingOpen": false,
+        "votingOpen": true,
         "votingClosedText": "¡Votación cerrada! No te pierdas el programa de Lunes a Viernes a las 8:30 p.m. y Domingos a las 8:00 p.m por Azteca UNO.",
-        "configVersion": "aa62113a8103f6d9"
+        "configVersion": "f80abeb5b4dfdb9b"
     },
     "polls": [
         {
             "key": "principal",
-            "configId": "ef7f2caf-14b2-49c5-a891-f0cab21a74f0",
-            "internalName": "11/11/2026 LGVIP26 SALVA A TU GRANJERO FAVORITO",
-            "title": "¡Vota para salvar a tu Granjero Favorito!",
+            "configId": "c4170d83-218b-475e-83f6-022f43aecb55",
+            "internalName": "16/11/26 - DUELO NOMINACION - LGVIP26 ",
+            "title": "Elige a un Granjero para el Duelo de Nominación",
             "subtitle": "Reparte tus 10 votos entre tus favoritos.",
             "maxVotes": 10,
             "accentColor": "#da07c8",
             "extraColor": "#d5d546",
-            "totalActiveVotes": 68900283,
-            "totalRawVotes": 268745225,
+            "totalActiveVotes": 22966800,
+            "totalRawVotes": 22966800,
             "contestants": [
                 {
-                    "id": "d4c89408-a283-4167-a56d-cf8d53066002",
+                    "id": "14128564-99df-4a1c-8447-10c65eb39dd1",
                     "name": "Ivonne Montero",
-                    "image": "https://vota.tvazteca.com/uploads/Ivonne_Montero_1788994702875.jpg",
-                    "votes": 38139904,
+                    "image": "https://vota.tvazteca.com/uploads/Ivonne_1794882727735.jpg",
+                    "votes": 13665209,
                     "rank": 1,
-                    "percentage": 55.36
+                    "percentage": 59.5
                 },
                 {
-                    "id": "3e151f8b-7872-4a84-9179-28d8e6467814",
-                    "name": "Rafa Mercadante",
-                    "image": "https://vota.tvazteca.com/uploads/Rafael_1794457587626.jpg",
-                    "votes": 30760379,
+                    "id": "fb9306c2-1da0-4383-8b33-951b2a163664",
+                    "name": "Bebeshita",
+                    "image": "https://vota.tvazteca.com/uploads/Bebeshita_1794276142630.jpg",
+                    "votes": 5012983,
                     "rank": 2,
-                    "percentage": 44.64
+                    "percentage": 21.83
+                },
+                {
+                    "id": "8c4a1bf4-b91c-4bff-8ce9-21605cfe5575",
+                    "name": "Niurka",
+                    "image": "https://vota.tvazteca.com/uploads/Niurka_1794276213646.jpg",
+                    "votes": 4247559,
+                    "rank": 3,
+                    "percentage": 18.49
+                },
+                {
+                    "id": "d21ba76d-8f97-4a97-8001-c544542d1ece",
+                    "name": "Manelyk",
+                    "image": "https://vota.tvazteca.com/uploads/Mane_1794881082727.jpg",
+                    "votes": 23200,
+                    "rank": 4,
+                    "percentage": 0.1
+                },
+                {
+                    "id": "5c089669-0921-4081-a231-6a6e7cffbf6b",
+                    "name": "Kevyn \"Bicolor\"",
+                    "image": "https://vota.tvazteca.com/uploads/Kevyn_Contreras_1793674823986.jpg",
+                    "votes": 9019,
+                    "rank": 5,
+                    "percentage": 0.04
+                },
+                {
+                    "id": "0c36a278-c379-42a4-9efc-a9a1485946d6",
+                    "name": "Kunno",
+                    "image": "https://vota.tvazteca.com/uploads/Kunno_1794276159687.jpg",
+                    "votes": 8830,
+                    "rank": 6,
+                    "percentage": 0.04
                 }
             ],
             "rawResults": {
-                "00000000-0000-0000-0000-000000000000": 20,
-                "0aa4019d-922b-4930-8372-ce05e078a74e": 155,
-                "24789d08-876d-4633-b4d1-3ad1068edf4d": 110708411,
-                "3e151f8b-7872-4a84-9179-28d8e6467814": 30760379,
-                "409ab39f-6b58-4bf3-8d11-11de4dcfcc50": 3,
-                "4d7f35ae-6c19-4e66-bf3b-4d81f9b1458f": 22,
-                "831bf043-46c1-4129-89c2-e42193041921": 1,
-                "953f2032-c90a-4739-98ac-7f555c3080c6": 107409,
-                "d4c89408-a283-4167-a56d-cf8d53066002": 38139904,
-                "d7443d5a-945f-45a4-8560-a7aa8324c21b": 3835170,
-                "ebfd487f-5128-4515-a847-36a1a5c2643c": 10,
-                "f493bca4-977a-4a1e-95b2-0083977adea1": 1,
-                "f4949176-08ce-4082-ba21-9419f8bc19f9": 85193701,
-                "f853cddb-9df6-4238-b3ca-2506caee8359": 9,
-                "x'": 10,
-                "x' AND SLEEP(5)#": 10,
-                "x' AND SLEEP(5)-- -": 10
+                "0c36a278-c379-42a4-9efc-a9a1485946d6": 8830,
+                "14128564-99df-4a1c-8447-10c65eb39dd1": 13665209,
+                "5c089669-0921-4081-a231-6a6e7cffbf6b": 9019,
+                "8c4a1bf4-b91c-4bff-8ce9-21605cfe5575": 4247559,
+                "d21ba76d-8f97-4a97-8001-c544542d1ece": 23200,
+                "fb9306c2-1da0-4383-8b33-951b2a163664": 5012983
             }
         }
     ]
