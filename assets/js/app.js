@@ -88,6 +88,13 @@ async function fetchLiveVotes(isInitial = false) {
                 if (contentType.includes('application/json')) {
                     const json = await resp.json();
                     if (json && json.ok && Array.isArray(json.polls) && json.polls.length > 0) {
+                        const hasVotes = json.polls.some(p => (p.totalActiveVotes || 0) > 0);
+                        if (json.resultsRestricted || !hasVotes) {
+                            // TV Azteca restringió/pausó el endpoint público de resultados: no sobrescribir con ceros
+                            state.resultsRestricted = true;
+                            break;
+                        }
+                        state.resultsRestricted = false;
                         state.connectionMode = isLocal
                             ? '🟢 Motor Local Activo (Laragon)' 
                             : '🟢 Servidor Cloud en Vivo';
@@ -100,7 +107,21 @@ async function fetchLiveVotes(isInitial = false) {
         } catch (_) {}
     }
 
-    // 2. Snapshot estático (Respaldo de emergencia)
+    // 2. Snapshot estático (Respaldo de emergencia cuando la API falla o TV Azteca restringe /api/results)
+    if (state.resultsRestricted && state.data && state.data.polls?.some(p => (p.totalActiveVotes || 0) > 0)) {
+        // Mantener los últimos datos válidos en pantalla y actualizar solo el aviso de estado
+        state.connectionMode = '⚠️ Conteo público pausado por TV Azteca (último corte válido)';
+        const elGlobalDelta = document.getElementById('kpi-global-delta');
+        if (elGlobalDelta) elGlobalDelta.textContent = state.connectionMode;
+        const banner = document.getElementById('live-mode-banner');
+        if (banner) {
+            banner.innerHTML = '<span>⚠️ <strong>Aviso de TV Azteca:</strong> El servidor oficial (<code>vota.tvazteca.com/api/results</code>) restringió temporalmente la consulta pública de resultados. Mostrando el último corte válido registrado; el monitor reanudará automáticamente cuando TV Azteca reactive el conteo.</span>';
+            banner.style.display = 'flex';
+        }
+        updateSyncIndicator(false);
+        return;
+    }
+
     try {
         const snapResp = await fetch(`data/snapshot.json?_t=${Date.now()}`, { cache: 'no-store' });
         if (snapResp.ok) {
@@ -118,7 +139,9 @@ async function fetchLiveVotes(isInitial = false) {
                     const dateObj = new Date(snapshot.timestamp);
                     timeText = ` (${dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })})`;
                 }
-                state.connectionMode = `☁️ Snapshot Sincronizado${timeText}`;
+                state.connectionMode = state.resultsRestricted
+                    ? `⚠️ Último corte oficial antes del bloqueo${timeText}`
+                    : `☁️ Snapshot Sincronizado${timeText}`;
                 processIncomingData(snapshot, isInitial);
                 updateSyncIndicator(false);
                 return;
@@ -199,7 +222,13 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed)
     const btnLocal = document.getElementById('btn-local-live');
     const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-    if (isLocalHost) {
+    if (state.resultsRestricted) {
+        if (banner) {
+            banner.innerHTML = '<span>⚠️ <strong>Aviso de TV Azteca:</strong> El servidor oficial (<code>vota.tvazteca.com/api/results</code>) restringió temporalmente la consulta pública de resultados. Mostrando el último corte válido registrado; el monitor reanudará automáticamente cuando TV Azteca reactive el conteo.</span>';
+            banner.style.display = 'flex';
+        }
+        if (isLocalHost && btnLocal) btnLocal.style.display = 'none';
+    } else if (isLocalHost) {
         if (banner) banner.style.display = 'none';
         if (btnLocal) btnLocal.style.display = 'none';
     } else {

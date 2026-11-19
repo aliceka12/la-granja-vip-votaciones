@@ -126,8 +126,17 @@ function formatPoll($votingConfig, $rawResults, $key, $baseUrl) {
     ];
 }
 
+$hasValidVotes = false;
+foreach ($polls as $p) {
+    if (!empty($p['totalActiveVotes']) && $p['totalActiveVotes'] > 0) {
+        $hasValidVotes = true;
+        break;
+    }
+}
+
 $payload = [
     'ok' => true,
+    'resultsRestricted' => !$hasValidVotes,
     'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
     'localTime' => date('Y-m-d H:i:s'),
     'sourceUrl' => 'https://www.tvazteca.com/aztecauno/la-granja-votaciones/vota/',
@@ -145,8 +154,9 @@ $payload = [
 
 $jsonOutput = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
+// Solo sobrescribir snapshot.json si trae conteo válido (> 0 votos)
 $snapshotDir = __DIR__ . '/../data';
-if (is_dir($snapshotDir) && is_writable($snapshotDir)) {
+if ($hasValidVotes && is_dir($snapshotDir) && is_writable($snapshotDir)) {
     @file_put_contents($snapshotDir . '/snapshot.json', $jsonOutput);
 }
 

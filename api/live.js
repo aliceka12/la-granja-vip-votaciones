@@ -48,23 +48,28 @@ export default async function handler(req, res) {
         }
 
         const polls = [];
+        let resultsRestricted = false;
 
         // Votación 1
         if (config.voting && config.voting.configId) {
             const v1 = config.voting;
-            const res1 = await fetchJson(`${BASE_URL}/api/results?config_id=${encodeURIComponent(v1.configId)}&_t=${Date.now()}`) || {};
-            polls.push(formatPoll(v1, res1, 'principal', BASE_URL));
+            const res1 = await fetchJson(`${BASE_URL}/api/results?config_id=${encodeURIComponent(v1.configId)}&_t=${Date.now()}`);
+            if (!res1) resultsRestricted = true;
+            const p1 = formatPoll(v1, res1 || {}, 'principal', BASE_URL);
+            if (p1.totalActiveVotes === 0) resultsRestricted = true;
+            polls.push(p1);
         }
 
         // Votación 2
         if (config.voting2 && config.voting2.enabled && config.voting2.configId) {
             const v2 = config.voting2;
-            const res2 = await fetchJson(`${BASE_URL}/api/results?config_id=${encodeURIComponent(v2.configId)}&_t=${Date.now()}`) || {};
-            polls.push(formatPoll(v2, res2, 'secundaria', BASE_URL));
+            const res2 = await fetchJson(`${BASE_URL}/api/results?config_id=${encodeURIComponent(v2.configId)}&_t=${Date.now()}`);
+            polls.push(formatPoll(v2, res2 || {}, 'secundaria', BASE_URL));
         }
 
         return res.status(200).json({
             ok: true,
+            resultsRestricted,
             timestamp: new Date().toISOString(),
             localTime: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }),
             sourceUrl: 'https://www.tvazteca.com/aztecauno/la-granja-votaciones/vota/',
