@@ -62,8 +62,7 @@ async function fetchLiveVotes(isInitial = false) {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     if (isLocal) {
-        endpointsToTry.push('api/live.php');
-        endpointsToTry.push('api/live');
+        endpointsToTry.push('php/live.php');
         endpointsToTry.push('https://la-granja-vip-votaciones.vercel.app/api/live');
     } else if (isVercel) {
         endpointsToTry.push('api/live');

@@ -25,7 +25,7 @@ jobs:
           extensions: curl, json
 
       - name: Fetch latest votes from TV Azteca API
-        run: php api/live.php > /dev/null
+        run: php php/live.php > /dev/null
 
       - name: Commit and push updated snapshot
         run: |
