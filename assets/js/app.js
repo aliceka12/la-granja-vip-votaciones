@@ -56,21 +56,21 @@ function startAutoRefresh() {
 async function fetchLiveVotes(isInitial = false) {
     updateSyncIndicator(true);
 
-    // 1. Probar endpoints dinámicos en tiempo real con prioridad
+    // 1. Probar endpoints dinámicos en tiempo real con prioridad según el entorno
     const endpointsToTry = [];
-    
-    // Si estamos en Vercel o en local, las rutas relativas responden directo
-    endpointsToTry.push('api/live');
-    endpointsToTry.push('api/live.php');
+    const isVercel = window.location.hostname.includes('vercel.app');
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-    // Si estamos en GitHub Pages o cualquier otro host, consultar SIEMPRE la API viva de Vercel (sin CORS)
-    if (!window.location.hostname.includes('vercel.app')) {
+    if (isLocal) {
+        endpointsToTry.push('api/live.php');
+        endpointsToTry.push('api/live');
         endpointsToTry.push('https://la-granja-vip-votaciones.vercel.app/api/live');
-    }
-
-    // Si corre en localhost con Laragon
-    if (window.location.hostname.includes('github.io') || window.location.hostname === 'localhost') {
-        endpointsToTry.push('http://localhost/la_granja_vip_votaciones/api/live.php');
+    } else if (isVercel) {
+        endpointsToTry.push('api/live');
+        endpointsToTry.push('https://la-granja-vip-votaciones.vercel.app/api/live');
+    } else {
+        // En GitHub Pages o cualquier otro host externo, ir directo a la Serverless Function de Vercel
+        endpointsToTry.push('https://la-granja-vip-votaciones.vercel.app/api/live');
     }
 
     for (const ep of endpointsToTry) {
@@ -89,7 +89,7 @@ async function fetchLiveVotes(isInitial = false) {
                 if (contentType.includes('application/json')) {
                     const json = await resp.json();
                     if (json && json.ok && Array.isArray(json.polls) && json.polls.length > 0) {
-                        state.connectionMode = ep.includes('localhost') 
+                        state.connectionMode = isLocal
                             ? '🟢 Motor Local Activo (Laragon)' 
                             : '🟢 Servidor Cloud en Vivo';
                         processIncomingData(json, isInitial);
@@ -306,6 +306,14 @@ function renderTabs(polls) {
     const container = document.getElementById('poll-tabs-container');
     if (!container) return;
 
+    // Si solo hay una votación activa o ninguna, no mostrar barra de pestañas para evitar duplicar títulos
+    if (!polls || polls.length <= 1) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    container.style.display = 'flex';
     const isClosed = state.data?.status?.votingOpen === false;
     const buttonsHtml = [];
     if (polls.length > 1) {
@@ -530,7 +538,13 @@ function renderPollChart(poll) {
         state.charts[canvasId].destroy();
     }
 
-    const labels = poll.contestants.map(c => c.name);
+    const isMobile = window.innerWidth <= 600;
+    const labels = poll.contestants.map(c => {
+        if (!isMobile) return c.name;
+        // En celular: acortar nombres largos (e.g. "Kevyn" en vez de 'Kevyn "Bicolor"')
+        const clean = c.name.replace(/"[^"]*"/g, '').trim();
+        return clean.length > 9 ? clean.split(' ')[0] : clean;
+    });
     const dataVotes = poll.contestants.map(c => c.votes);
     const colors = [
         '#10b981',
@@ -550,7 +564,7 @@ function renderPollChart(poll) {
                 label: 'Votos Registrados',
                 data: dataVotes,
                 backgroundColor: colors.slice(0, labels.length),
-                borderRadius: 8,
+                borderRadius: isMobile ? 5 : 8,
                 borderSkipped: false
             }]
         },
@@ -562,19 +576,42 @@ function renderPollChart(poll) {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (context) => ` ${fmtNum(context.raw)} votos`
+                        title: (tooltipItems) => {
+                            const idx = tooltipItems[0].dataIndex;
+                            return poll.contestants[idx]?.name || '';
+                        },
+                        label: (context) => {
+                            const total = poll.totalActiveVotes || 1;
+                            const pct = ((context.raw / total) * 100).toFixed(2);
+                            return ` ${fmtNum(context.raw)} votos (${pct}%)`;
+                        }
                     }
                 }
             },
             scales: {
                 x: {
-                    ticks: { color: '#cbd5e1', font: { weight: '600' } },
+                    ticks: { 
+                        color: '#cbd5e1', 
+                        font: { weight: '600', size: isMobile ? 10 : 12 },
+                        maxRotation: isMobile ? 35 : 0,
+                        minRotation: isMobile ? 35 : 0
+                    },
                     grid: { display: false }
                 },
                 y: {
                     ticks: {
                         color: '#94a3b8',
-                        callback: (val) => fmtNum(val)
+                        font: { size: isMobile ? 10 : 12 },
+                        callback: (val) => {
+                            if (val >= 1000000) {
+                                const m = val / 1000000;
+                                return (m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)) + 'M';
+                            }
+                            if (val >= 1000) {
+                                return (val / 1000).toFixed(0) + 'k';
+                            }
+                            return fmtNum(val);
+                        }
                     },
                     grid: { color: 'rgba(255, 255, 255, 0.06)' }
                 }
@@ -633,3 +670,17 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
+
+// Re-renderizar gráficas dinámicamente cuando el usuario rota la pantalla o cambia el tamaño
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        if (state.data && state.data.polls && window.Chart) {
+            const visiblePolls = state.viewMode === 'dual'
+                ? state.data.polls
+                : state.data.polls.filter(p => p.key === state.viewMode);
+            visiblePolls.forEach(poll => renderPollChart(poll));
+        }
+    }, 250);
+});

@@ -806,3 +806,403 @@ body {
     font-size: 0.8rem;
     color: var(--text-muted);
 }
+
+/* ==========================================================================
+   OPTIMIZACIONES RESPONSIVAS PARA DISPOSITIVOS MÓVILES (CELULARES Y TABLETS)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 12px 10px 48px;
+    }
+
+    /* Barra Superior / Header */
+    .top-navbar {
+        padding: 14px 14px;
+        margin-bottom: 16px;
+        border-radius: 16px;
+        gap: 12px;
+    }
+
+    .brand-group {
+        width: 100%;
+        gap: 12px;
+    }
+
+    .brand-logo {
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+    }
+
+    .brand-titles h1 {
+        font-size: 1.08rem;
+        line-height: 1.25;
+    }
+
+    .brand-subtitle {
+        font-size: 0.74rem;
+        margin-top: 2px;
+    }
+
+    .controls-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .live-badge {
+        grid-column: span 2;
+        justify-content: center;
+        padding: 7px 12px;
+        font-size: 0.76rem;
+    }
+
+    #btn-local-live {
+        display: none !important;
+    }
+
+    .select-interval {
+        width: 100%;
+        font-size: 0.78rem;
+        padding: 8px 8px;
+        text-overflow: ellipsis;
+    }
+
+    #btn-refresh-now {
+        width: 100%;
+        justify-content: center;
+        font-size: 0.78rem;
+        padding: 8px 10px;
+    }
+
+    #btn-vote-link {
+        grid-column: span 2;
+        width: 100%;
+        justify-content: center;
+        font-size: 0.88rem;
+        padding: 10px 14px;
+    }
+
+    .live-mode-banner {
+        padding: 10px 12px;
+        font-size: 0.78rem;
+        margin-bottom: 14px;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    /* Cuadrícula de KPIs */
+    .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .kpi-card {
+        padding: 12px 12px;
+        border-radius: 12px;
+    }
+
+    .kpi-card:first-child {
+        grid-column: span 2;
+    }
+
+    .kpi-label {
+        font-size: 0.7rem;
+    }
+
+    .kpi-value {
+        font-size: clamp(1.15rem, 5vw, 1.4rem);
+        margin: 2px 0;
+    }
+
+    .kpi-sub {
+        font-size: 0.72rem;
+    }
+
+    /* Pestañas de filtrado */
+    .poll-tabs {
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .poll-tab-btn {
+        padding: 12px 14px;
+    }
+
+    .tab-main-title {
+        font-size: 0.9rem;
+    }
+
+    .tab-votes-count {
+        font-size: 0.95rem;
+        padding: 4px 8px;
+    }
+
+    /* Panel de Votación */
+    .polls-Wrapper,
+    .polls-Wrapper.dual-view {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .poll-section {
+        padding: 16px 12px;
+        border-radius: 16px;
+    }
+
+    .poll-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding-bottom: 12px;
+        margin-bottom: 14px;
+    }
+
+    .poll-tag {
+        font-size: 0.68rem;
+        padding: 3px 10px;
+    }
+
+    .poll-title {
+        font-size: 1.15rem;
+        line-height: 1.25;
+    }
+
+    .poll-subtitle {
+        font-size: 0.76rem;
+    }
+
+    .poll-total-box {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        border-radius: 10px;
+    }
+
+    .poll-total-box span {
+        margin-bottom: 0;
+        font-size: 0.72rem;
+    }
+
+    .poll-total-box strong {
+        font-size: 1.22rem;
+    }
+
+    /* Tarjetas de Participantes */
+    .contestants-list {
+        gap: 10px;
+    }
+
+    .contestant-card {
+        padding: 10px 12px;
+        border-radius: 12px;
+    }
+
+    .contestant-top {
+        gap: 8px;
+        margin-bottom: 8px;
+        align-items: center;
+    }
+
+    .contestant-identity {
+        gap: 8px;
+        min-width: 0;
+        flex: 1 1 auto;
+        align-items: center;
+    }
+
+    .rank-badge {
+        width: 26px;
+        height: 26px;
+        font-size: 0.75rem;
+        border-radius: 7px;
+        flex-shrink: 0;
+    }
+
+    .contestant-avatar {
+        width: 42px;
+        height: 42px;
+        flex-shrink: 0;
+    }
+
+    .contestant-name {
+        font-size: 0.92rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px;
+    }
+
+    .contestant-status-tag {
+        font-size: 0.68rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px;
+    }
+
+    .contestant-metrics {
+        flex-shrink: 0;
+        text-align: right;
+    }
+
+    .percentage-big {
+        font-size: 1.15rem;
+    }
+
+    .votes-exact {
+        font-size: 0.72rem;
+        gap: 3px;
+    }
+
+    .progress-track {
+        height: 8px;
+    }
+
+    /* Tarjeta de Veredicto de Cierre */
+    .final-verdict-card {
+        padding: 14px 12px;
+        border-radius: 14px;
+        margin-bottom: 14px;
+    }
+
+    .verdict-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .verdict-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .verdict-col {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .verdict-avatar {
+        width: 50px;
+        height: 50px;
+    }
+
+    .verdict-details h4 {
+        font-size: 0.98rem;
+    }
+
+    .verdict-stats {
+        font-size: 0.76rem;
+    }
+
+    /* Gráfica de barras */
+    .chart-container-box {
+        height: 200px;
+        margin-top: 14px;
+        padding-top: 12px;
+    }
+
+    /* Paneles de Información y Registro de Votos */
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .info-panel {
+        padding: 14px 12px;
+        border-radius: 12px;
+    }
+
+    .info-panel h3 {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+
+    .log-list {
+        max-height: 150px;
+        font-size: 0.74rem;
+        gap: 6px;
+    }
+
+    .log-item {
+        padding: 6px 8px;
+        flex-direction: column;
+        gap: 3px;
+        align-items: flex-start;
+    }
+
+    .log-item > span:last-child {
+        align-self: flex-end;
+        font-size: 0.7rem;
+    }
+
+    .footer-note {
+        margin-top: 24px;
+        font-size: 0.74rem;
+        padding: 0 8px;
+    }
+}
+
+@media (max-width: 420px) {
+    .contestant-name {
+        max-width: 105px;
+        font-size: 0.86rem;
+    }
+
+    .contestant-status-tag {
+        max-width: 105px;
+        font-size: 0.65rem;
+    }
+
+    .percentage-big {
+        font-size: 1.05rem;
+    }
+
+    .votes-exact {
+        font-size: 0.68rem;
+    }
+
+    .contestant-avatar {
+        width: 38px;
+        height: 38px;
+    }
+
+    .rank-badge {
+        width: 24px;
+        height: 24px;
+        font-size: 0.72rem;
+    }
+
+    .controls-group {
+        grid-template-columns: 1fr;
+    }
+
+    .live-badge,
+    .select-interval,
+    #btn-refresh-now,
+    #btn-vote-link {
+        grid-column: span 1 !important;
+    }
+}
+
+@media (max-width: 360px) {
+    .contestant-name {
+        max-width: 85px;
+        font-size: 0.82rem;
+    }
+
+    .percentage-big {
+        font-size: 0.98rem;
+    }
+
+    .votes-exact {
+        font-size: 0.65rem;
+    }
+}
