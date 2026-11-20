@@ -31,7 +31,17 @@ export default async function handler(req, res) {
             });
             clearTimeout(timeout);
             if (response.ok) {
-                return await response.json();
+                const text = await response.text();
+                if (!text) return null;
+                try {
+                    return JSON.parse(text);
+                } catch (_) {
+                    try {
+                        return JSON.parse(text.replace(/'/g, '"'));
+                    } catch (_) {
+                        return null;
+                    }
+                }
             }
         } catch (_) {}
         return null;
