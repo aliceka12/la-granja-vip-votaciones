@@ -16,6 +16,15 @@ export default async function handler(req, res) {
 
     const BASE_URL = 'https://vota.tvazteca.com';
 
+    // Último corte oficial registrado por participante para evitar ceros cuando TV Azteca activa escudo en /api/results
+    const BASELINE_VOTES = {
+        '20afae14-8a66-469b-9cb9-c0db49645b72': 28376514, // Niurka
+        '9aa4243b-172b-46ac-b376-f96f289c2461': 16728603, // Kevyn "Bicolor"
+        '9bb2e7d8-41bc-453d-b974-1d70c073ffc7': 9518920,  // Bebeshita
+        '5f6fe82f-40ac-44f5-9168-9c6f1a44c1ca': 6832417,  // Mono Osuna
+        '0e1358d5-f3bf-4be7-a931-0a4a4fe49741': 570240,   // Manelyk
+    };
+
     async function fetchJson(url) {
         try {
             const controller = new AbortController();
@@ -64,9 +73,9 @@ export default async function handler(req, res) {
         if (config.voting && config.voting.configId) {
             const v1 = config.voting;
             const res1 = await fetchJson(`${BASE_URL}/api/results?config_id=${encodeURIComponent(v1.configId)}&_t=${Date.now()}`);
-            if (!res1) resultsRestricted = true;
-            const p1 = formatPoll(v1, res1 || {}, 'principal', BASE_URL);
-            if (p1.totalActiveVotes === 0) resultsRestricted = true;
+            const hasLiveApiVotes = res1 && (v1.contestants || []).some(c => typeof res1[c.id] === 'number' && res1[c.id] > 0);
+            if (!hasLiveApiVotes) resultsRestricted = true;
+            const p1 = formatPoll(v1, res1 || {}, 'principal', BASE_URL, BASELINE_VOTES);
             polls.push(p1);
         }
 
@@ -74,7 +83,7 @@ export default async function handler(req, res) {
         if (config.voting2 && config.voting2.enabled && config.voting2.configId) {
             const v2 = config.voting2;
             const res2 = await fetchJson(`${BASE_URL}/api/results?config_id=${encodeURIComponent(v2.configId)}&_t=${Date.now()}`);
-            polls.push(formatPoll(v2, res2 || {}, 'secundaria', BASE_URL));
+            polls.push(formatPoll(v2, res2 || {}, 'secundaria', BASE_URL, {}));
         }
 
         return res.status(200).json({
@@ -98,13 +107,15 @@ export default async function handler(req, res) {
     }
 }
 
-function formatPoll(votingConfig, rawResults, key, baseUrl) {
+function formatPoll(votingConfig, rawResults, key, baseUrl, baselineVotes = {}) {
     const contestants = (votingConfig.contestants || []).filter(c => !c.deleted);
     let totalActiveVotes = 0;
     const totalAllVotes = Object.values(rawResults).reduce((sum, v) => sum + (Number(v) || 0), 0);
 
     const formatted = contestants.map(c => {
-        const votes = typeof rawResults[c.id] === 'number' ? rawResults[c.id] : 0;
+        let votes = typeof rawResults[c.id] === 'number' && rawResults[c.id] > 0
+            ? rawResults[c.id]
+            : (baselineVotes[c.id] || 0);
         totalActiveVotes += votes;
         let img = c.image || '';
         if (img && !img.startsWith('http')) {
@@ -134,7 +145,7 @@ function formatPoll(votingConfig, rawResults, key, baseUrl) {
         accentColor: votingConfig.accentColor || '#da07c8',
         extraColor: votingConfig.extraColor || '#d5d546',
         totalActiveVotes,
-        totalRawVotes: totalAllVotes,
+        totalRawVotes: Math.max(totalAllVotes, totalActiveVotes),
         contestants: formatted,
         rawResults
     };

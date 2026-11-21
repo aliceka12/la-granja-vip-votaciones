@@ -89,15 +89,17 @@ async function fetchLiveVotes(isInitial = false) {
                     const json = await resp.json();
                     if (json && json.ok && Array.isArray(json.polls) && json.polls.length > 0) {
                         const hasVotes = json.polls.some(p => (p.totalActiveVotes || 0) > 0);
-                        if (json.resultsRestricted || !hasVotes) {
+                        if (!hasVotes) {
                             // TV Azteca restringió/pausó el endpoint público de resultados: no sobrescribir con ceros
                             state.resultsRestricted = true;
                             break;
                         }
-                        state.resultsRestricted = false;
+                        state.resultsRestricted = Boolean(json.resultsRestricted);
                         state.connectionMode = isLocal
                             ? '🟢 Motor Local Activo (Laragon)' 
-                            : '🟢 Servidor Cloud en Vivo';
+                            : (state.resultsRestricted 
+                                ? '⚠️ Conteo en vivo (Corte oficial TV Azteca tras Viernes de Traición)' 
+                                : '🟢 Servidor Cloud en Vivo');
                         processIncomingData(json, isInitial);
                         updateSyncIndicator(false);
                         return;
