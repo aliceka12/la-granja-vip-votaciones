@@ -16,15 +16,6 @@ export default async function handler(req, res) {
 
     const BASE_URL = 'https://vota.tvazteca.com';
 
-    // Último corte oficial registrado por participante para evitar ceros cuando TV Azteca activa escudo en /api/results
-    const BASELINE_VOTES = {
-        '20afae14-8a66-469b-9cb9-c0db49645b72': 28376514, // Niurka
-        '9aa4243b-172b-46ac-b376-f96f289c2461': 16728603, // Kevyn "Bicolor"
-        '9bb2e7d8-41bc-453d-b974-1d70c073ffc7': 9518920,  // Bebeshita
-        '5f6fe82f-40ac-44f5-9168-9c6f1a44c1ca': 6832417,  // Mono Osuna
-        '0e1358d5-f3bf-4be7-a931-0a4a4fe49741': 570240,   // Manelyk
-    };
-
     async function fetchJson(url) {
         try {
             const controller = new AbortController();
@@ -73,9 +64,9 @@ export default async function handler(req, res) {
         if (config.voting && config.voting.configId) {
             const v1 = config.voting;
             const res1 = await fetchJson(`${BASE_URL}/api/results?config_id=${encodeURIComponent(v1.configId)}&_t=${Date.now()}`);
-            const hasLiveApiVotes = res1 && (v1.contestants || []).some(c => typeof res1[c.id] === 'number' && res1[c.id] > 0);
+            const hasLiveApiVotes = Boolean(res1 && (v1.contestants || []).some(c => !c.deleted && typeof res1[c.id] === 'number' && res1[c.id] > 0));
             if (!hasLiveApiVotes) resultsRestricted = true;
-            const p1 = formatPoll(v1, res1 || {}, 'principal', BASE_URL, BASELINE_VOTES);
+            const p1 = formatPoll(v1, hasLiveApiVotes ? res1 : {}, 'principal', BASE_URL);
             polls.push(p1);
         }
 
@@ -83,7 +74,8 @@ export default async function handler(req, res) {
         if (config.voting2 && config.voting2.enabled && config.voting2.configId) {
             const v2 = config.voting2;
             const res2 = await fetchJson(`${BASE_URL}/api/results?config_id=${encodeURIComponent(v2.configId)}&_t=${Date.now()}`);
-            polls.push(formatPoll(v2, res2 || {}, 'secundaria', BASE_URL, {}));
+            const hasLive2 = Boolean(res2 && (v2.contestants || []).some(c => !c.deleted && typeof res2[c.id] === 'number' && res2[c.id] > 0));
+            polls.push(formatPoll(v2, hasLive2 ? res2 : {}, 'secundaria', BASE_URL));
         }
 
         return res.status(200).json({

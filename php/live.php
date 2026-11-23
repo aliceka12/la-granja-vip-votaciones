@@ -56,31 +56,23 @@ if (!$config) {
     exit;
 }
 
-$BASELINE_VOTES = [
-    '20afae14-8a66-469b-9cb9-c0db49645b72' => 28376514, // Niurka
-    '9aa4243b-172b-46ac-b376-f96f289c2461' => 16728603, // Kevyn "Bicolor"
-    '9bb2e7d8-41bc-453d-b974-1d70c073ffc7' => 9518920,  // Bebeshita
-    '5f6fe82f-40ac-44f5-9168-9c6f1a44c1ca' => 6832417,  // Mono Osuna
-    '0e1358d5-f3bf-4be7-a931-0a4a4fe49741' => 570240,   // Manelyk
-];
-
 $polls = [];
 
 if (!empty($config['voting']) && !empty($config['voting']['configId'])) {
     $v1 = $config['voting'];
     $cid1 = $v1['configId'];
     $res1 = fetchJson("$baseUrl/api/results?config_id=" . urlencode($cid1) . "&_t=" . time()) ?: [];
-    $polls[] = formatPoll($v1, $res1, 'principal', $baseUrl, $BASELINE_VOTES);
+    $polls[] = formatPoll($v1, $res1, 'principal', $baseUrl);
 }
 
 if (!empty($config['voting2']) && !empty($config['voting2']['enabled']) && !empty($config['voting2']['configId'])) {
     $v2 = $config['voting2'];
     $cid2 = $v2['configId'];
     $res2 = fetchJson("$baseUrl/api/results?config_id=" . urlencode($cid2) . "&_t=" . time()) ?: [];
-    $polls[] = formatPoll($v2, $res2, 'secundaria', $baseUrl, []);
+    $polls[] = formatPoll($v2, $res2, 'secundaria', $baseUrl);
 }
 
-function formatPoll($votingConfig, $rawResults, $key, $baseUrl, $baselineVotes = []) {
+function formatPoll($votingConfig, $rawResults, $key, $baseUrl) {
     $contestants = $votingConfig['contestants'] ?? [];
     $activeContestants = [];
     $totalActiveVotes = 0;
@@ -91,9 +83,7 @@ function formatPoll($votingConfig, $rawResults, $key, $baseUrl, $baselineVotes =
             continue;
         }
         $id = $c['id'];
-        $votes = isset($rawResults[$id]) && (int)$rawResults[$id] > 0 
-            ? (int)$rawResults[$id] 
-            : ($baselineVotes[$id] ?? 0);
+        $votes = isset($rawResults[$id]) ? (int)$rawResults[$id] : 0;
         $totalActiveVotes += $votes;
 
         $img = $c['image'] ?? '';

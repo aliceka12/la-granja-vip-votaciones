@@ -89,17 +89,10 @@ async function fetchLiveVotes(isInitial = false) {
                     const json = await resp.json();
                     if (json && json.ok && Array.isArray(json.polls) && json.polls.length > 0) {
                         const hasVotes = json.polls.some(p => (p.totalActiveVotes || 0) > 0);
-                        if (!hasVotes) {
-                            // TV Azteca restringió/pausó el endpoint público de resultados: no sobrescribir con ceros
-                            state.resultsRestricted = true;
-                            break;
-                        }
-                        state.resultsRestricted = Boolean(json.resultsRestricted);
+                        state.resultsRestricted = Boolean(json.resultsRestricted) || !hasVotes;
                         state.connectionMode = isLocal
-                            ? '🟢 Motor Local Activo (Laragon)' 
-                            : (state.resultsRestricted 
-                                ? '⚠️ Conteo en vivo (Corte oficial TV Azteca tras Viernes de Traición)' 
-                                : '🟢 Servidor Cloud en Vivo');
+                            ? (state.resultsRestricted ? '🔒 Conteo privado en TV Azteca (Motor Local)' : '🟢 Motor Local Activo (Laragon)')
+                            : (state.resultsRestricted ? '🔒 Conteo privado en TV Azteca' : '🟢 Servidor Cloud en Vivo');
                         processIncomingData(json, isInitial);
                         updateSyncIndicator(false);
                         return;
@@ -268,11 +261,15 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed)
     }
 
     const elTotalGlobal = document.getElementById('kpi-global-votes');
-    if (elTotalGlobal) elTotalGlobal.textContent = fmtNum(totalGlobalVotes);
+    if (elTotalGlobal) {
+        elTotalGlobal.textContent = state.resultsRestricted ? 'Reservado' : fmtNum(totalGlobalVotes);
+    }
 
     const elGlobalDelta = document.getElementById('kpi-global-delta');
     if (elGlobalDelta) {
-        if (isClosed) {
+        if (state.resultsRestricted) {
+            elGlobalDelta.textContent = '🔒 TV Azteca mantiene el conteo privado';
+        } else if (isClosed) {
             elGlobalDelta.textContent = '✅ Resultados Oficiales Definitivos';
         } else if (totalGlobalDelta > 0) {
             elGlobalDelta.innerHTML = `<span class="delta-pill">+${fmtNum(totalGlobalDelta)} votos nuevos</span>`;
@@ -286,20 +283,30 @@ function renderHeaderAndKPIs(data, totalGlobalVotes, totalGlobalDelta, isClosed)
         const p1 = data.polls[0];
         const leader1 = p1.contestants[0];
         const lbl1 = document.getElementById('kpi-leader1-label');
-        if (lbl1) {
-            lbl1.textContent = isClosed 
-                ? '🏆 1° Lugar Oficial' 
-                : `1° Lugar · ${p1.title.slice(0, 24)}`;
+        if (state.resultsRestricted) {
+            if (lbl1) lbl1.textContent = 'Estado de Cifras';
+            document.getElementById('kpi-leader1-name').textContent = 'Conteo Privado';
+            document.getElementById('kpi-leader1-sub').textContent = `${p1.contestants.length} participantes en esta placa`;
+        } else {
+            if (lbl1) {
+                lbl1.textContent = isClosed 
+                    ? '🏆 1° Lugar Oficial' 
+                    : `1° Lugar · ${p1.title.slice(0, 24)}`;
+            }
+            document.getElementById('kpi-leader1-name').textContent = leader1.name;
+            document.getElementById('kpi-leader1-sub').textContent = isClosed
+                ? `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos) · 1° Lugar`
+                : `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos)`;
         }
-        document.getElementById('kpi-leader1-name').textContent = leader1.name;
-        document.getElementById('kpi-leader1-sub').textContent = isClosed
-            ? `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos) · 1° Lugar`
-            : `${fmtPct(leader1.percentage)} (${fmtNum(leader1.votes)} votos)`;
     }
 
     // Segundo lugar / En Riesgo / Último lugar
     const lbl2 = document.getElementById('kpi-leader2-label');
-    if (data.polls[1] && data.polls[1].contestants[0]) {
+    if (state.resultsRestricted) {
+        if (lbl2) lbl2.textContent = 'Resultado de Gala';
+        document.getElementById('kpi-leader2-name').textContent = isClosed ? 'Votación Cerrada' : 'En Curso';
+        document.getElementById('kpi-leader2-sub').textContent = 'Sin cifras públicas en /api/results';
+    } else if (data.polls[1] && data.polls[1].contestants[0]) {
         const p2 = data.polls[1];
         const leader2 = p2.contestants[0];
         if (lbl2) lbl2.textContent = `1° Lugar · ${p2.title.slice(0, 24)}`;
@@ -400,6 +407,7 @@ function renderPolls(polls, deltas, isClosed) {
         : 'polls-Wrapper';
 
     wrapper.innerHTML = visiblePolls.map((poll, idx) => {
+        const isRestricted = state.resultsRestricted || (poll.totalActiveVotes || 0) === 0;
         const isEliminationOrSave = /salv|nominad|elimin|favorito/i.test(poll.title + ' ' + poll.internalName);
         const winner = poll.contestants[0];
         const loser = poll.contestants[poll.contestants.length - 1];
@@ -413,14 +421,18 @@ function renderPolls(polls, deltas, isClosed) {
         let displaySubtitle = poll.subtitle;
 
         if (isClosed) {
-            badgeLabel = '🏆 RESULTADOS OFICIALES DEFINITIVOS';
-            displayTitle = `Resultado Oficial: ${poll.title.replace(/^¡Vota (para|por) /i, '').replace(/!$/, '')}`;
-            displaySubtitle = `Votación concluida al término del programa por Azteca UNO · Total: ${fmtNum(poll.totalActiveVotes)} votos auditados.`;
+            badgeLabel = isRestricted
+                ? '🔒 VOTACIÓN CERRADA · CIFRAS RESERVADAS'
+                : '🏆 RESULTADOS OFICIALES DEFINITIVOS';
+            displayTitle = `Votación Cerrada: ${poll.title.replace(/^¡Vota (para|por) /i, '').replace(/!$/, '')}`;
+            displaySubtitle = isRestricted
+                ? 'Votación concluida al término del programa por Azteca UNO · TV Azteca mantiene reservadas las cifras en su API pública.'
+                : `Votación concluida al término del programa por Azteca UNO · Total: ${fmtNum(poll.totalActiveVotes)} votos auditados.`;
         }
 
-        // Veredicto final destacado cuando la votación ya cerró
+        // Veredicto final destacado solo cuando existen cifras reales públicas (nunca inventar ganador/eliminado)
         let verdictCardHtml = '';
-        if (isClosed && winner && loser && poll.contestants.length >= 2) {
+        if (isClosed && !isRestricted && winner && loser && poll.contestants.length >= 2) {
             const winPill = isEliminationOrSave ? '🏆 SALVADA / SALVADO POR EL PÚBLICO' : '👑 1° LUGAR DE LA VOTACIÓN';
             const losePill = isEliminationOrSave ? '❌ PARTICIPANTE ELIMINADO' : 'MENOR VOTACIÓN REGISTRADA';
 
@@ -469,6 +481,29 @@ function renderPolls(polls, deltas, isClosed) {
         }
 
         const cardsHtml = poll.contestants.map((c) => {
+            if (isRestricted) {
+                return `
+                    <div class="contestant-card">
+                        <div class="contestant-top">
+                            <div class="contestant-identity">
+                                <div class="rank-badge">•</div>
+                                <img class="contestant-avatar" src="${escapeHtml(c.image)}" alt="${escapeHtml(c.name)}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=da07c8&color=fff'">
+                                <div>
+                                    <div class="contestant-name">${escapeHtml(c.name)}</div>
+                                    <div class="contestant-status-tag">${isClosed ? 'Participó en la placa cerrada' : 'Nominado activo en esta placa'}</div>
+                                </div>
+                            </div>
+                            <div class="contestant-metrics">
+                                <div class="percentage-big" style="font-size: 0.95rem; color: var(--text-secondary);">🔒 Reservado</div>
+                                <div class="votes-exact">
+                                    <span>Conteo privado en TV Azteca</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
             const key = `${poll.configId}_${c.id}`;
             const delta = deltas[key] || 0;
             const deltaHtml = delta > 0 && !isClosed
@@ -537,8 +572,8 @@ function renderPolls(polls, deltas, isClosed) {
                         <p class="poll-subtitle">${escapeHtml(displaySubtitle)} · ID: <code>${poll.configId.slice(0, 8)}</code></p>
                     </div>
                     <div class="poll-total-box">
-                        <span>${isClosed ? 'Votos Totales Auditados' : 'Votos Totales'}</span>
-                        <strong>${fmtNum(poll.totalActiveVotes)}</strong>
+                        <span>${isRestricted ? 'Cifras Públicas' : (isClosed ? 'Votos Totales Auditados' : 'Votos Totales')}</span>
+                        <strong>${isRestricted ? '🔒 Privado' : fmtNum(poll.totalActiveVotes)}</strong>
                     </div>
                 </div>
 
@@ -547,15 +582,17 @@ function renderPolls(polls, deltas, isClosed) {
                 <div class="contestants-list">
                     ${cardsHtml}
                 </div>
-                <div class="chart-container-box">
-                    <canvas id="chart-${poll.key}"></canvas>
-                </div>
+                ${isRestricted ? '' : `<div class="chart-container-box"><canvas id="chart-${poll.key}"></canvas></div>`}
             </section>
         `;
     }).join('');
 
     if (window.Chart) {
-        visiblePolls.forEach(poll => renderPollChart(poll));
+        visiblePolls.forEach(poll => {
+            if (!state.resultsRestricted && (poll.totalActiveVotes || 0) > 0) {
+                renderPollChart(poll);
+            }
+        });
     }
 }
 
@@ -653,6 +690,20 @@ function renderPollChart(poll) {
 function renderLogs(isClosed, poll) {
     const list = document.getElementById('live-log-list');
     if (!list) return;
+
+    if (state.resultsRestricted) {
+        list.innerHTML = `
+            <li class="log-item" style="border-left-color: #f59e0b;">
+                <span>TV Azteca mantiene restringido el endpoint público <code>/api/results</code>.</span>
+                <span style="color:#fbbf24">Privado</span>
+            </li>
+            <li class="log-item">
+                <span>El monitor sigue conectado a <code>vota.json</code> y reanudará el conteo automáticamente si TV Azteca vuelve a abrir las cifras públicas.</span>
+                <span style="color:#94a3b8">En espera</span>
+            </li>
+        `;
+        return;
+    }
 
     if (isClosed && poll && poll.contestants && poll.contestants.length > 0) {
         const winner = poll.contestants[0];
